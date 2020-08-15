@@ -1,0 +1,94 @@
+Touch go
+========
+Working with go 1.14.
+
+They are not enforcing `~/go/src` anymore.
+
+A mysterious module system is online
+    has a holy name of nuclear launching code `GO111MODULE`
+
+A mysterious design decision was made: get repo uri from web api
+
+https://golang.org/doc/code.html
+    > Commands like go install apply within the context of the module containing the current working directory. If the working directory is not within the example.com/user/hello module, go install may fail.
+    Even more mysteries.
+    So `go install/build` still targets packages. But there is the additional thing called "context of the module". And your pwd shalt be under "the module" directory, otherwise `go install` "may fail" in a mysterious way.
+
+
+
+---------------------
+
+`go build` build the package? the module? 
+`go install`?
+                exe             lib
+build        cache             cache
+install       go/bin          NOTHING
+
+what does it mean to install a lib?
+
+## package name & directory name
+Apparently *.go file with `package main` can be put directly in the module root.
+Is sub-directory necessary for package other than `main`?
+    If yes, does their `package xxx` need to be identical to the directory name?
+Is `main` the only exception?
+
+
+## Dependency
+The directly depended package will be put in `pkg/mod/<IMPORT_PATH>`
+
+while the dependency of dependency will be put in `pkg/mod/cache/download`
+
+`go.sum` keeps the dependencies transitive closure.
+
+the import path hierarchy is made readonly from the `package name` dir:
+```
+[ced@ARCH3 mod]$ pwd
+/home/ced/go/pkg/mod
+[ced@ARCH3 mod]$ tree -p -L 4
+.
+├── [drwxr-xr-x]  cache
+│   └── [drwxr-xr-x]  download
+│       ├── [drwxr-xr-x]  github.com
+│       │   └── [drwxr-xr-x]  google
+│       └── [drwxr-xr-x]  golang.org
+│           └── [drwxr-xr-x]  x
+└── [drwxr-xr-x]  github.com
+    └── [drwxr-xr-x]  google
+        └── [dr-x------]  go-cmp@v0.5.1
+            ├── [dr-xr-xr-x]  cmp
+            ├── [-r--r--r--]  CONTRIBUTING.md
+            ├── [-r--r--r--]  go.mod
+            ├── [-r--r--r--]  go.sum
+            ├── [-r--r--r--]  LICENSE
+            └── [-r--r--r--]  README.md
+
+10 directories, 5 files
+```
+
+
+package - the native modularization system
+=======
+One directory must contain at most one package. You cannot have 2 source files with `package foo` and `package bar` in the same directory.
+
+The name of the contained package need NOT be identical to the directory name. If they are, the name of the imported namespace is identical to the last component of the import path, lessening the burden of memorizing. Otherwise you if are going to have a directory "foo/" containing some source file of `package bar`, in the client code you will be importing `import xxx.com/user/module/foo` but the imported things are called `bar`.
+
+Notice the requirement of the correspondence of directory hierarchy and import path, just like java. So the package directories can be nested and the import path of one being a prefix of that of another. But still like java, all packages are born equal and separate, and there is no such thing as 'sub-package'. Importing one does not import the packages in its sub-directories.
+
+(import path and package name are just 2 complete irrelevant things)
+the name of the directory only matters for:
+- client code that use import path to refer to that lib package
+- the exe compiled from main package has the same name of the directory, since all main package are called main
+It's okay for the directory of `package main` source files to be named `nomain/`. No client code will be importing an executable.
+
+The purpose of package
+- visiability of unexported symbols
+- the unit of build/install/...
+
+GO111MODULE
+=====
+- unit of distribution tagging a version
+- make dependency management explicit and clear, resemble maven artifact
+
+Source file put in the same directory of `go.mod` will be of the root package of the module. The import path of the root package is just the module path.
+
+## The root package problem

@@ -1,0 +1,18 @@
+working with PKI
+figuring out how certs work
+    chain of trust / web of trust (TODO)
+    trust anchor
+    Root CA / Root certificate
+    self signing
+
+
+cipher suites
+    combinations of
+    - key exchanging algo
+    - bulk encryption algo
+    - message auth code (MAC) algo
+
+leave ssl things for a while, decide to work out the website compiler first.
+done with ssi. looking at how go template lib handle the web templating thing.
+
+looking at go 1.14.

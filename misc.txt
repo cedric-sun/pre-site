@@ -1,0 +1,108 @@
+process runtime files that reside on filesystem (FHS memo)
+=============
+/run must be "cleared" between system boot - required by FHS.
+    program must have subdirectory rather than direct put files there.
+    pid file must be put here. - robustness principle
+    domain socket must be placed here
+
+/var
+/tmp
+
+
+URI trailing slash in HTTP
+==========================
+Some implementation can send a 3xx to redirect client to a slash-appended uri - see servlet 4.0 and tomcat docs (mapperContextRootRedirectEnabled and  mapperDirectoryRedirectEnabled)
+
+while some site is configured to just 404, e.g.
+    - `https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s15.html` works while
+    - `https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s15.html/` returns 404 (apache httpd)
+
+doesn't really have a standard on this , and is completely upto admin and implementation choices.
+
+
+you can't really avoid non-printables
+=====================================
+there are workarounds for you to NOT write non-printables in code.
+    Bash $PS1 promise to expand \e to \033
+
+there also even tricks:
+    sed -e 's/'$(echo "octal-value")'/replace-word/g'
+
+Not consistent. you have to use the above echo trick sometimes
+
+ANSI escape
+===========
+terminal is represented as a file descriptor. Normally it also behaves as a file: it records (print) whatever you write to it.
+But writing some pre-defined sequence of bytes (that is intentionally hard to occur naturally) is used to change behaviors of 
+the tty (display devices).
+
+This is a type of in-band control.
+
+man 4 console_codes
+
+open new fd for current bash
+    exec 100<file
+
+Bash behavior when receiving end of a pipe is not a simple program
+==========================================================
+Every single simple program (that will eventually be a separate process) or a bash builtin that has the concept of emulated stdin, in the function or while construct, will have their stdin all from the same pipe.
+
+### function
+```bash
+[ced@ARCH3 ~]$ fooo() {
+> head -c3 -
+> echo
+> head -c3 -
+> echo
+> head -c3 -
+> echo
+> }
+[ced@ARCH3 ~]$ echo '123abc999ggg' | fooo
+123
+abc
+999
+```
+
+### while
+```
+[ced@ARCH3 ~]$ echo -e '123abcxxx\n000\n' | while read data; do   echo $data;   head -c1;   echo; done
+123abcxxx
+0
+00
+
+
+```
+
+ssl equivalent to nc file transmission
+======================================
+openssl s_server
+openssl s_client
+
+command echo not bringing a new process
+    still using bash builtin
+
+PK Cert
+====
+the one who wants to prove the identity of himself needs to send the cert
+the one who is receiving the certificate needs to trust the issuer
+
+sed extract line range
+====
+sed -n '16224,16482p;16483q' filename > newfile
+
+https://stackoverflow.com/questions/83329/how-can-i-extract-a-predetermined-range-of-lines-from-a-text-file-on-unix
+
+Find largest files in directory tree
+====================================
+```bash
+find . -printf '%s %p\n'|sort -nr|head
+```
+
+https://stackoverflow.com/questions/12522269/how-to-find-the-largest-file-in-a-directory-and-its-subdirectories
+
+
+SQL display large number of fields in terminal
+```
+select * from user\G
+```
+https://stackoverflow.com/questions/924729/how-to-best-display-in-terminal-a-mysql-select-returning-too-many-fields

@@ -1,0 +1,85 @@
+Apache httpd admin memo
+=======================
+
+(One and only one) mpm module must be activated.
+    LoadModule mpm_event_module modules/mod_mpm_event.so
+    > http://httpd.apache.org/docs/2.4/mpm.html
+    > At the user level, MPMs appear much like other Apache httpd modules. The main difference is that one and only one MPM must be loaded into the server at any time.
+
+
+Activate `authz_core_module` to use `Require` directive
+    LoadModule authz_core_module modules/mod_authz_core.so
+
+Activate a security module to let httpd relinquish root privileges.
+    AH00136: Server MUST relinquish startup privileges before accepting connections.  Please ensure mod_unixd or other system security module is loaded.
+    LoadModule unixd_module modules/mod_unixd.so
+    this is required even when httpd is started and keeps running as a normal user
+
+/run and /run/httpd can only be writen by root
+    change PidFile
+    ( ? change Mutex needed ? )
+
+shutdown specific httpd daemon
+    httpd -k graceful-stop -f $PWD/httpd.conf
+
+<Directory directory-path>
+    http://httpd.apache.org/docs/current/mod/core.html#directory
+        Directory-path is either
+        - the full path to a directory, or
+        - a wild-card string using Unix shell-style matching.
+
+    http://httpd.apache.org/docs/current/mod/directive-dict.html
+        directory-path
+        The path to a directory in the local file-system beginning with the root directory as in /usr/local/apache/htdocs/path/to/.
+
+    Interesting enough when work in debug mode (-X), actually relative path works, and is relative to ServerRoot. Without -X, absolute path is required. This behavior is not documented.
+
+    httpd -f /home/ced/httpd2nd_inst/httpd.conf -X
+    [ced@ARCH3 ~]$ curl localhost:8080/index.txt
+    hello world
+    
+    httpd -f /home/ced/httpd2nd_inst/httpd.conf
+    [ced@ARCH3 ~]$ curl localhost:8080/index.txt
+    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+    <html><head>
+    <title>403 Forbidden</title>
+    </head><body>
+    <h1>Forbidden</h1>
+    <p>You don't have permission to access this resource.</p>
+    </body></html>
+
+Dump parsed config
+    LoadModule info_module modules/mod_info.so
+    httpd -t -DDUMP_CONFIG
+
+prefixed uri path
+    There is such thing "nested <Location>". You always need
+        <Location /foo></Location>
+        <Location /foo/bar></Location>
+
+not really dig into the config merging rules
+    merging configs seems always a complicated thing. recalling servlet 4.0 web-fragment.xml stuff.
+
+Enable auto-supplying a index file when a directory is requested
+    LoadModule dir_module modules/mod_dir.so
+    DirectoryIndex index.txt
+
+Display directory content list when no DirectoryIndex specified file is found
+    LoadModule autoindex_module modules/mod_autoindex.so
+    TODO: config
+
+Trailing slash handling when mapping to fs
+                                            dir              normal file
+    request end with slash          DirectoryIndex                404
+    request not end with slash              301                 supply
+
+    RFC7230 5.3.1
+    > If the target URI's path component is empty, the client MUST send "/" as the path within the origin-form of request-target.
+
+Dependency .so is not loaded automatically
+    when used as reverse proxy, loading mod_proxy is not enough.
+    mod_proxy depends on mod_proxy_http to work
+    both need to be loaded manually
+
+Reverse Proxy
+=============
