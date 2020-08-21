@@ -1,0 +1,16 @@
+As a coder living more in the back-end world, it's always funky for me to see those javascript libraries working in both browser and js runtimes e.g. node. Things get even worse when
+    - those libraries designed sorely to run in browsers are also managed by `npm`.
+    - doc authors mix things together, take their own context as granted for everyone. They generally talk "oh, this is our template engine" and continue with the usage in browser as granted, without even thinking about "Is your template engine designed to work with filesystem?" 
+
+
+
+
+## APIs: filesystem access and DOM
+As a js lib developer you can't assume where your code are going to run.  You can't assume you can access the local disk, so you should not write filesystem io code at all. Push the loading file stuff to your client.
+
+## modularization system
+
+## to name a few...
+### mustache.js
+
+### progressbar.js

@@ -92,3 +92,365 @@ GO111MODULE
 Source file put in the same directory of `go.mod` will be of the root package of the module. The import path of the root package is just the module path.
 
 ## The root package problem
+
+
+TODO: https://blog.golang.org/migrating-to-go-modules
+
+
+Caching optimization
+============
+```bash
+TMPFS_GO='/tmp'
+GOCACHE="$TMPFS_GO"
+GOMODCACHE="$TMPFS_GO"
+```
+
+Method call in template pipeline - anonying problem
+=====
+In golang source text, receiver interchangeability is there. You can have a method with pointer receiver but call it with a value. This is not the case for template string of `text/template`.
+
+function parameter/method receiver - parameter and argument
+=====
+                        arg pointer         arg obj
+receiver    pointer       pointer           pointer
+            obj           obj               obj
+function    pointer      pointer            COMPILE_ERR
+            obj         COMPILE_ERR         obj
+
+Methods can be called on object and pointer interchangeably. The value-or-reference behavior solely depends on the type of the receiver. Function parameter and argument must match exactly (not interchangeable).
+
+CLI args
+=======
+
+The missing section of go doc text/template
+========
+mental picture:
+    Each instance of `type Template` is a COLLECTION of `(name, content)` pairs.
+    `name` is plain string, for now consider `content` as some internal representation.
+    `content` could be non-existent, which in the go doc's speak is "undefined template" or "empty body".
+
+    Among those pairs there is a main pair, whose `name` is said to be the name of this `Template` instance,
+    which is the output of `func (t *Template) Name() string`,
+    and whose content will be send to the designated writer after rendering.
+
+    The call `func (t *Template) Execute(wr io.Writer, data interface{}) error` will execute the main pair only.
+
+    The main pair is determined when a `Template` instance is created:
+    - the first file supplied as argument of `func ParseFiles(filenames ...string) (*Template, error)`
+    - the first file matched by `func ParseGlob(pattern string) (*Template, error)` (see docs)
+    - `func New(name string) *Template`
+
+    `func New(name string) *Template`
+        literally create a `type Template` instance with a main pair of the given `name` and non-existent content.
+            To set a content for such a main pair, see `go doc text/template Template.Parse`, which only takes a string
+            Mind that if the string given as the argument of `Parse()`, after removal of all `{{define}}`s, becomes
+            empty in the sense that only whitesapces and comment left, THE CONTENT OF THE MAIN PAIR WILL STILL BE NON-EXISTENT.
+            The reason of this behavior is explained in `go doc text/template Template.Parse`.
+            Example:
+            ```go
+            // snippet from https://golang.org/pkg/html/template/
+            import "text/template"
+            ...
+            t, err := template.New("foo").Parse(`{{define "T"}}Hello, {{.}}!{{end}}`)
+            // the main pair of t has name "foo" but a non-existent content
+            err = t.ExecuteTemplate(out, "T", "<script>alert('you have been pwned')</script>")
+            ```
+            ( TODO:`addParseTree()`? )
+        If the main pair of a `type Template` instance `t` has a non-existent content,
+        `t.Execute()` always fail. see `go doc text/template Template.ParseFiles`
+
+    The `name` of a pair is determined by...
+    - for each file supplied as argument of `func ParseFiles(filenames ...string) (*Template, error)`, it's the name of the file
+    - for each file matched by `func ParseGlob(pattern string) (*Template, error)`, it's the name of the file
+    - `func New(name string) *Template` and `func (t *Template) New(name string) *Template` explicitly specify the name
+    - `{{ define "xxx" }}...{{end}}` that appear in parsed file; in this example it's `xxx`
+
+    Those aim of non-main pairs is
+    - to be referred by `{{ template "..."}}` in the content of the main pair to build the final output
+    - to be send to the writer along (after rendering) using 
+        `func (t *Template) ExecuteTemplate(wr io.Writer, name string, data interface{}) error`
+
+    The `content` of a parsed file does not include `{{define "..."}}...{{end}}`.
+    See `go doc text/template Template.Parse` for this.
+
+   `func (t *Template) Option(opt ...string) *Template` controls the behavior when no data is supplied for placeholders.
+
+   <del>`name` of pair must be unique. No 2 pairs with the same `name` is allowed (nor would that makes senes)</del>
+   The following is validated by experiment. But I think it's go's internal design decision and shalt not be utilized
+   as a feature for most programmers:
+       For a single file or single string, it's not allowed to `{{define}}` 2 pairs with the same name.
+       But it's okay to do so if those 2 `{{define}}` is separated in 2 files. The last encountered `{{define}}` will
+       replace all previous `{{define}}` with the same name.
+       `go doc text/template ParseFiles` and `go doc text/template Template.ParseFiles` explain a similar effect.
+   Anyway, just avoid pairs with identical names.
+
+
+
+The OKAY things to be pass as argument
+=====
+basic type
+pointer
+small struct (?)
+interface // how do i konw if a identifier is interface or struct type?
+slice
+
+# Constant, the high precision thing
+
+Redeclaration in short variable Declaration
+=======
+ https://golang.org/ref/spec#Short_variable_declarations
+ As a consequence, redeclaration can only appear in a multi-variable short declaration.
+ Redeclaration does not introduce a new variable; it just assigns a new value to the original.
+
+
+Hackish optional parameter
+====
+```go
+
+func mustNil(x interface{}, msg ...string) {
+    if x != nil {
+        var topanic interface{}
+        if msg == nil {
+            topanic = x
+        } else {
+            topanic = msg[0]
+        }
+        panic(topanic)
+    }
+}
+
+func main() {
+    // ...
+    fileInfos, err := ioutil.ReadDir(srcDirPath)
+    mustNil(err)
+
+    siteFptr, err := os.Open(filepath.Join(srcDirPath,( *siteFinfo ).Name()))
+    mustNil(err,"what") // here we go the optional parameter
+}
+```
+
+}
+
+
+What type can be used as a receiver
+=====
+Types that are defined (using the `type identifier ...` statement) in other packages cannot be a receiver in the current package.
+
+Basic types cannot be used as a receiver directly, but okay after you alias it:
+```go
+type MyFloat64 float64
+
+func (f MyFloat64) Abs() float64 {
+	ret := float64(f)
+	if ret < 0 {
+		return -ret
+	}
+	return ret
+}
+```
+
+
+Do not defer close on writable files
+===
+https://www.joeshaw.org/dont-defer-close-on-writable-files/
+
+tldr: `func (*File) close` flush the write buffer and this flush might be unsuccessful. `defer` a function call ignores error.
+
+Array
+============
+An array's size is fixed; its length is part of its type ([4]int and [5]int are distinct, incompatible types).
+```go
+var a [4]int // zero initialized
+b := [...]string{"Penn", "Teller"} // ask compiler set the length
+```
+
+
+Slices
+========
+## slice with zero value nil
+```go
+var intSlice []int
+```
+
+## from slicing an array
+```go
+primes := [6]int{2, 3, 5, 7, 11, 13}
+var s []int = primes[1:4]
+```
+
+## slice literal
+https://tour.golang.org/moretypes/9
+```go
+q := []int{2, 3, 5, 7, 11, 13}
+```
+
+## the make
+https://golang.org/ref/spec#Making_slices_maps_and_channels
+```plain
+Call             Type T     Result
+
+make(T, n)       slice      slice of type T with length n and capacity n
+make(T, n, m)    slice      slice of type T with length n and capacity m
+```
+
+Each member of the slice (thus underlying array) is set to that type's zero value.
+```go
+s := make([]int, 10, 100)       // slice with len(s) == 10, cap(s) == 100
+s := make([]int, 1e3)           // slice with len(s) == cap(s) == 1000
+s := make([]int, 1<<63)         // illegal: len(s) is not representable by a value of type int
+s := make([]int, 10, 0)         // illegal: len(s) > cap(s)
+```
+
+
+Slice of anything as func parameter
+====
+In golang you use `interface{}` as a parameter in function to take anything. This is not the case if you want a slice of anything.
+https://ahmet.im/blog/golang-take-slices-of-any-type-as-input-parameter/
+```go
+package main
+
+import "fmt"
+
+func printSlice(x []interface{}, id string) {
+	fmt.Printf("%s\t%p\t%v\tlen=%d\tcap=%d\n", id, x, x, len(x), cap(x))
+}
+
+func main() {
+    s0 := []int{0, 0, 1, 2, 3, 4, 5}
+    printSlice(s0,"s0") // oops
+}
+```
+
+
+oh, Append
+=====
+
+It just scared me the first time I saw go people write:
+```go
+mySlice = append(mySlice, 1,2,3)
+```
+
+Cornucopia questions emerge ... say
+Is `append` an in-place operation? Well, it seems not... otherwise the assignment is unnecessary... Wait, does that mean they keep the original `mySlice` intact, while creating a brand new storage to... Wait, won't that be super expensive? Is it even safe to use `append` in loop?
+
+If it's in-place, why assignment anyway? (compiler complains if you do not catch the return value of `append`)
+If it's not in-place, isn't that expensive and stupid anyway?
+
+A simple test would be even more horrible:
+```go
+package main
+
+import "fmt"
+
+func main() {
+    s0 := []int{0,1,2,3}
+    fmt.Printf("%p\n",s0)
+    s1 := append(s0,4,5,6)
+    fmt.Printf("%p\n",s1)
+}
+```
+
+```bash
+$ go run .
+0xc0000be000
+0xc0000c2000
+```
+
+Geez, they are doing crazy evil stuffs!
+
+If 2 slices are sharing the underlying array and their windows overlap, change to one will inevitably be visiable to other. If this is unintentional, it will just look like your memory is clobbered. But anyway that's defined behavior, and programmer should be responsible for avoid such thing. The real problem is, by using append, you never know which call to `append` create a new array (unless you check explicitly).
+
+
+ref:
+https://blog.golang.org/slices
+https://blog.golang.org/slices-intro
+
+
+
+enum construct: const and iota
+=======
+```go
+// A FileMode represents a file's mode and permission bits.
+// The bits have the same definition on all systems, so that
+// information about files can be moved from one system
+// to another portably. Not all bits apply to all systems.
+// The only required bit is ModeDir for directories.
+type FileMode uint32
+
+// The defined file mode bits are the most significant bits of the FileMode.
+// The nine least-significant bits are the standard Unix rwxrwxrwx permissions.
+// The values of these bits should be considered part of the public API and
+// may be used in wire protocols or disk representations: they must not be
+// changed, although new bits might be added.
+const (
+	// The single letters are the abbreviations
+	// used by the String method's formatting.
+	ModeDir        FileMode = 1 << (32 - 1 - iota) // d: is a directory
+	ModeAppend                                     // a: append-only
+	ModeExclusive                                  // l: exclusive use
+	ModeTemporary                                  // T: temporary file; Plan 9 only
+	ModeSymlink                                    // L: symbolic link
+	ModeDevice                                     // D: device file
+	ModeNamedPipe                                  // p: named pipe (FIFO)
+	ModeSocket                                     // S: Unix domain socket
+	ModeSetuid                                     // u: setuid
+	ModeSetgid                                     // g: setgid
+	ModeCharDevice                                 // c: Unix character device, when ModeDevice is set
+	ModeSticky                                     // t: sticky
+	ModeIrregular                                  // ?: non-regular file; nothing else is known about this file
+
+	// Mask for the type bits. For regular files, none will be set.
+	ModeType = ModeDir | ModeSymlink | ModeNamedPipe | ModeSocket | ModeDevice | ModeCharDevice | ModeIrregular
+
+	ModePerm FileMode = 0777 // Unix permission bits
+)
+```
+
+err
+=====
+Check out the definition of the `error` interface and it says that any type that has a `Error() string` method is an `error` value;
+Conceptually the `error` value is just a string describing the problem.
+
+Can be extended to be more informational:
+```go
+type PathError struct {
+    Op   string
+    Path string
+    Err  error
+}
+```
+
+Great patterns to avoid spilling `if err != nil` everywhere:
+
+New err handling in Go 1.13 (September 3, 2019)
+https://blog.golang.org/go1.13-errors
+
+Terms
+====
+The golang spec is avoiding the word 'object'.
+
+
+Read line idiom
+====
+```go
+file,err := os.Open(path)
+if err != nil {
+    panic(err)
+}
+defer file.Close() // defer okay for RO file
+
+fileScanner := bufio.NewScanner(file)
+for fileScanner.Scan() {
+    line := fileScanner.Text()
+    // do stuffs...
+}
+if err := fileScanner.Err(); err != nil {
+    panic(err)
+}
+```
+
+net/http
+===========
+The interface `Handler` has 2 implementations in `net/http`:
+- type HandlerFunc func(ResponseWriter, *Request)
+- type ServeMux struct { // contains filtered or unexported fields }

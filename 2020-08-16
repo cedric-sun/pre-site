@@ -1,0 +1,46 @@
+Gnome .desktop file
+=====
+Jetbrains seems to like creating 2 set of .desktop files for compatibility.
+```bash
+[ced@ARCH3 tmp]$ cat comp 
+#!/bin/bash
+
+PREFIX0='/home/ced/.gnome/apps'
+PREFIX1='/home/ced/.local/share/applications'
+
+# note $path0 is absolute path due to expansion rule
+for path0 in $PREFIX0/*; do
+    # echo $path0
+    basef=$(basename -- $path0)
+    # echo $basef
+    path1="$PREFIX1/$basef"
+    # echo $path1
+    if [[ -f $path1 ]]; then
+        echo "diff $path0 $path1"
+        diff "$path0" "$path1"
+    fi
+done
+[ced@ARCH3 tmp]$ ./comp 
+diff /home/ced/.gnome/apps/jetbrains-clion.desktop /home/ced/.local/share/applications/jetbrains-clion.desktop
+11d10
+< OnlyShowIn=Old;
+diff /home/ced/.gnome/apps/jetbrains-goland.desktop /home/ced/.local/share/applications/jetbrains-goland.desktop
+11d10
+< OnlyShowIn=Old;
+diff /home/ced/.gnome/apps/jetbrains-idea.desktop /home/ced/.local/share/applications/jetbrains-idea.desktop
+11d10
+< OnlyShowIn=Old;
+diff /home/ced/.gnome/apps/jetbrains-pycharm.desktop /home/ced/.local/share/applications/jetbrains-pycharm.desktop
+11d10
+< OnlyShowIn=Old;
+diff /home/ced/.gnome/apps/jetbrains-webstorm.desktop /home/ced/.local/share/applications/jetbrains-webstorm.desktop
+11d10
+< OnlyShowIn=Old;
+```
+
+bash script path handling
+======
+### extract filename & extension
+https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
+
+### realpath / basename

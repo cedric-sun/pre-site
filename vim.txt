@@ -1,0 +1,21 @@
+Vim Vim
+==========
+
+Search/Replace across lines
+------
+https://stackoverflow.com/questions/71417/why-is-r-a-newline-for-vim
+https://stackoverflow.com/questions/71323/how-to-replace-a-character-by-a-newline-in-vim
+https://stackoverflow.com/questions/8209161/can-i-replace-multiline-like-this-in-vim
+
+
+ search for selected text
+ ------
+https://vim.fandom.com/wiki/Search_for_visually_selected_text
+
+
+Replace the previous search pattern
+-----
+Just left pattern blank
+```vim
+:%s//foo/g
+```

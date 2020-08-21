@@ -1,0 +1,29 @@
+The first observation I made for building a static website is that, there are so many common parts among pages, e.g. meta tags, SNS share optimizations (open graph), common assets(css/js), page layout.
+
+When I first start working with the compiler of my static website, I noticed that I need a template system. I start with native js regex replacement. The first intuitive idea was simple:
+...
+
+I realize that I'm writing extremely specific code tightly coupled with the structure of my site and tightly coupled with the gulp task flow system.
+
+The gulp system provide you a somewhat simplistic framework. You have the `src()` call to collect a set of files (actually, `vinyl`s, i.e. file content and its metadata). Those files will possibly go through some *non parameterized* filters, which is essentially node native transformation stream. These filters are ideal for jobs like minimizing html/css/js and compile scss, whose output sorely depends on the input of the stream. But what if you want to combine a HTML layout template containing placeholders with the actual `<main>...</main>` of your index page? There is no transformation stream that takes multiple input object streams and somehow zip their objects together (and it would be mysterious to make sense out of that).
+
+Anyway, it's a problem to assemble the HTMLs snippets with gulp.
+
+- transformation stream is bad
+- use gulp task is bad, need handle the order of task ...
+- the fact that gulp work with files cheat me into the trap of using tasks all the time
+
+
+Later I realize this is far from ideal. ... . I realize that I'd better take a look at how other "templating" things do. The first thing I turned to was the golang 'text/template'. Later I worked with mustache.js.
+
+
+## Put data into placeholders are NOT enough.
+
+## Are template loaded from file? (or can it?)
+
+
+## YOUR PARTIALS ARE NOT GOOD ENOUGH!
+Many of those template engine claim that they support "partials",
+ but really, they allow you to "refer to partials" but never "define partials"
+mustache.js
+handlebar.js
