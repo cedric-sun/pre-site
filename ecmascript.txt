@@ -1,0 +1,11 @@
+Asynchronous-ness
+=====
+
+being async means that the return of a function call does not means the job expected is finished
+
+
+Closure
+=====
+Having a closure meaning whatever symbol there is in the outer function is now available (supplied as running context) in the inner function. If the inner function is a standalone top-level function, you have to pass all the outer symbol as parameter.
+
+The same thing apply to all language that allow closure (e.g. Go)

@@ -366,6 +366,9 @@ https://blog.golang.org/slices
 https://blog.golang.org/slices-intro
 
 
+const
+==============
+
 
 enum construct: const and iota
 =======
@@ -421,9 +424,12 @@ type PathError struct {
 ```
 
 Great patterns to avoid spilling `if err != nil` everywhere:
+    really?
 
 New err handling in Go 1.13 (September 3, 2019)
 https://blog.golang.org/go1.13-errors
+
+https://stackoverflow.com/questions/18771569/avoid-checking-if-error-is-nil-repetition
 
 Terms
 ====
@@ -454,3 +460,89 @@ net/http
 The interface `Handler` has 2 implementations in `net/http`:
 - type HandlerFunc func(ResponseWriter, *Request)
 - type ServeMux struct { // contains filtered or unexported fields }
+
+
+defer gotcha
+====
+https://blog.learngoprogramming.com/gotchas-of-defer-in-go-1-8d070894cb01
+
+go fashion OO
+=====
+Inheritance means subtype must own all field of its supertype.
+In both C and go this can be done if a struct has a field of type of another struct.
+
+It also mean for a method of supertype, you can call
+
+
+the root package problem
+=============
+given a package name after the `import` keyword,
+```go
+import "github.com/foo/bar/zoo/baz"
+```
+How does go tool know which prefix is the module path?
+
+
+The un-import-able `package main`
+======
+https://stackoverflow.com/questions/44420826/access-main-package-from-other-package
+
+It's a very natural choice to use the `flag` package and parse cli arguments in `package main`. ...
+
+But you can't really save that configs in a global variable of struct type, because you can't import `main` from other package thus this variable is not sharable anyway.
+
+10 things you ..
+====
+https://talks.golang.org/2012/10things.slide#1
+
+Add log to http.FileServer
+=====
+https://stackoverflow.com/questions/34017342/log-404-on-http-fileserver
+
+
+THE MOST CURSED DESIGN CHOICE OF GOLANG
+=======
+If it's a pointer okay life is easy because you can see that asterisk there promising to you "here this is just a 64-bit pointer on amd64".
+
+But if you see a parameter of some type name that's not a pointer, as a c programmer this immediately destroyed me because you are passing by value maybe.
+
+
+In Go, there are six categories of value that are passed by reference rather than by value. These are pointers, slices, maps, channels, interfaces and functions.
+https://stackoverflow.com/questions/44351159/using-pointer-to-channel?rq=1
+
+github.com/gorilla/websocket
+=========
+The callback set by `SetCloseHandler()` won't be triggered if the received message is not examined by `ReadMessage()`, `NextReader()` ....
+
+
+CURB YOUR SHORT VARIABLE DECLARATION
+=====
+Let's see this
+```go
+func wsHandlerFunc(w http.ResponseWriter, r *http.Request) {
+    c,err := upgrader.Upgrade(w,r,nil)
+    if err != nil {panic(err)}
+
+    for {
+        _,msg,err := c.ReadMessage()
+        if err != nil {break}
+        fmt.Printf("clieng msg: %s\n", msg)
+    }
+    fmt.Printf("%T\n",err) // ALWAYS <nil> !
+}
+```
+
+```go
+func wsHandlerFunc(w http.ResponseWriter, r *http.Request) {
+    c,err := upgrader.Upgrade(w,r,nil)
+    if err != nil {panic(err)}
+
+    for {
+        var msg []byte
+        _,msg,err = c.ReadMessage()
+        if err != nil {break}
+        fmt.Printf("clieng msg: %s\n", msg)
+    }
+    fmt.Printf("%T\n",err) // *websocket.CloseError
+}
+```
