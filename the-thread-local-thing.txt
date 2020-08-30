@@ -1,0 +1,3 @@
+Thread-local errno
+=====
+https://en.wikipedia.org/wiki/Thread-local_storage

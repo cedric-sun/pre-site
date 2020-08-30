@@ -1,0 +1,9 @@
+viewport dissect
+====
+In order to support features like zoom, browser usually tell js runtime a simulated viewport size. On my HD 1080 (1920x1080) monitor, 150% zoomed linux chrome this is ...
+```
+window.innerWidth=
+window.innerHeight=
+```
+
+On a 125% system-wide scaled window pc with unscaled chrome this is `xxx * 1536`

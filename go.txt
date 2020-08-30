@@ -509,11 +509,32 @@ But if you see a parameter of some type name that's not a pointer, as a c progra
 
 In Go, there are six categories of value that are passed by reference rather than by value. These are pointers, slices, maps, channels, interfaces and functions.
 https://stackoverflow.com/questions/44351159/using-pointer-to-channel?rq=1
+https://stackoverflow.com/questions/31170368/go-reference-types-as-arguments
 
 github.com/gorilla/websocket
 =========
 The callback set by `SetCloseHandler()` won't be triggered if the received message is not examined by `ReadMessage()`, `NextReader()` ....
 
+## Handle client side close
+- Set callback with `conn.SetCloseHandler()`
+TODO...
+- Assert `*websocket.CloseError` Directly
+a second thought you realize that Go is fully concurrent, and (not like Javascript) callback is not the only way of handle event
+```go
+func wsHandlerFunc(w http.ResponseWriter, r *http.Request) {
+    c,err := upgrader.Upgrade(w,r,nil)
+    if err != nil {panic(err)}
+
+    for {
+        var msg []byte
+        _,msg,err = c.ReadMessage()
+        if err != nil {break}
+        fmt.Printf("clieng msg: %s\n", msg)
+    }
+    errCloseError := err.(*websocket.CloseError)
+    fmt.Println("client closed. code:",errCloseError.Code,"text:",errCloseError.Text)
+}
+```
 
 CURB YOUR SHORT VARIABLE DECLARATION
 =====
@@ -544,5 +565,198 @@ func wsHandlerFunc(w http.ResponseWriter, r *http.Request) {
         fmt.Printf("clieng msg: %s\n", msg)
     }
     fmt.Printf("%T\n",err) // *websocket.CloseError
+}
+```
+
+
+ref to ref
+===
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+   slice0 := []int{1,2,3,4,5}
+   fmt.Println(slice0)
+   slice1 := slice0 // you can never create a ref to a ref
+   fmt.Println(slice1)
+   slice1 = slice1[:4]
+   fmt.Println(slice1)
+   fmt.Println(slice0)
+}
+```
+
+
+two-value assignment variant 
+=====
+1. map membership test
+2. type assertion
+3. channel close confirm
+
+Search "the special form" in spec
+
+
+unified filepath handling
+======
+1. always call `Clean` on strings that refer to filesystem path
+
+
+Limited Liskov Substitution
+============
+Only variable declared as interface type can have its underlying dynamic type.
+One struct type can has the fields of another struct type, and the methods... (embeded pointer?)
+
+Type assertion is only permitted on an interface type. It's like a cast, but only for interface.
+it might be easy to be confused with (type) "Conversions":
+```go
+package main
+
+import "fmt"
+
+type op string // not assignable, thus conversion is legal via the second clause: "ignoring struct tags (see below), x's type and T have identical underlying types."
+
+func main() {
+        var x string = "hello"
+        // y := x.(op) // invalid type assertion: x.(op) (non-interface type string on left)
+        y := op(x)
+	fmt.Println("Hello, playground",y)
+}
+```
+
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type A struct {}
+
+func (a *A) foo() string {return "42"}
+
+func (a A) goo() string {return "goooooo!"}
+
+type B struct {A}
+
+// any B value is a Gooler now
+// any *B value is both a Fooler and a Gooler
+
+type Fooler interface {
+    foo() string
+}
+
+type Gooler interface {
+    goo() string
+}
+
+func myFuncNeedFooler(f Fooler) {
+   fmt.Println(f.foo())
+}
+
+func myFuncNeedGooler(g Gooler) {
+   fmt.Println(g.goo())
+}
+
+func main() {
+	x:= B{}
+	myFuncNeedFooler(&x)
+    //myFuncNeedFooler(x)
+	myFuncNeedGooler(x)
+	myFuncNeedGooler(&x)
+}
+```
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type A struct {foo,zoo,too int}
+
+type B struct {
+    A
+    bar string
+}
+
+func main() {
+   x := B{}
+   fmt.Println(x.A) // {0 0 0} - access through "A" as a whole
+}
+```
+
+
+the opaque pointer 
+=====
+
+
+
+
+Consideration: when and when not to split code into a new package
+=====
+If some of the code is to be separate into a new package, it means that it makes sense to import that package alone.
+Otherwise you should split source file but still in the same package.
+
+
+# defer dingus
+https://blog.golang.org/defer-panic-and-recover
+1. timing of deferred function arguments evaluation 
+    A deferred function's arguments are evaluated when the defer statement is evaluated.
+2. FILO stack of deferred statements
+    Deferred function calls are executed in Last In First Out order after the surrounding function returns.
+3. Access to named return
+    Deferred functions may read and assign to the returning function's named return values.
+
+
+# Conventionally, a go lib does not expose panic to client
+https://blog.golang.org/defer-panic-and-recover
+    The convention in the Go libraries is that even when a package uses panic internally, its external API still presents explicit error return values.
+
+Slice is a struct while map is a pointer `*hmap`
+=====
+https://stackoverflow.com/questions/49176090/map-as-a-method-receiver
+Just slight difference, both are lightweight enough so that you usually don't need a pointer to a slice
+
+A deeper implication is that, to change the length of the slice in a method (---TODO: how?---), you need a slice pointer receiver. But you always don't need a map pointer receiver.
+https://golang.org/doc/faq#methods_on_values_or_pointers
+
+
+Type declaration
+=====
+there are 2 ways of introducing a new identifier that represent a type
+
+1. type alias
+```go
+type foo =  map[string]int
+```
+2. type definition
+```go
+type foo map[string]int
+```
+
+Conceptually aliased name is an alias for the original type, and is always considered identical to the original type.
+
+Type definition introduce a new type, is always considered different from the original type, but based on the original type, 
+
+For type alias, the following code fails to compile, because 2 identical types appear in the switch branches.
+For type definition, it prints "foo"
+```go
+func bar(x interface{}) {
+    switch  x.(type) {
+    case map[string]int:
+        fmt.Println("map[string]int")
+    case foo:
+        fmt.Println("foo")
+    }
+}
+
+func main() {
+    y := make(foo)
+    bar(y)
 }
 ```

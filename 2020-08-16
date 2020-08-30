@@ -44,3 +44,7 @@ bash script path handling
 https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
 
 ### realpath / basename
+
+
+### path concatenation
+https://stackoverflow.com/questions/11226322/how-to-concatenate-two-strings-to-build-a-complete-path

@@ -1,0 +1,145 @@
+Achievement of shared secret
+=======
+### Key Agreement Scheme
+
+### Key Encapsulation Mechanism
+
+### 
+
+
+Terms
+==================
+integrity       the data i'm receiving is not tampered with. Middle Man flipping even a single bit will be detected.
+                but i'm not necessarily sure who the guy sending bits to me is.
+
+Authenticity    I'm doing tcp with remote peer 187.a.b.c:11223, bob told me this is his amazing server, 
+
+
+x509
+===============
+X.509 is the standard that define the format of public key certificate, they are published by ITU-T, a United Nations affiliated organization.
+
+A conforming X.509 certificate is in binary form. Its base64 encoding is generally called "PEM" defined by RFC7468
+
+
+TODO: inspect the format
+
+
+Man in the middle attack
+---------------
+A very nice intro to man in the middle : https://www.youtube.com/watch?v=-enHfpHMBo4
+
+They say ADH is vulerable to man in the middle.
+
+I used to think that man-in-the-middle doesn't work if you put a tag with the ciphertext.
+
+Say Alice and Bob have a 128-bit shared secret already:
+    1. They start to talk in AES128-CBC; Eve sees noise, but she can flip a bit, and the recipient can't detect by just looking at the received ciphertext. After decryption the recipient always see garbage, but the crypto system itself doesn't provide a way to detect tampering. Plus, you always have to decrypt first, which is a cost.
+    2. They start to talk in AES128-CBC and each ciphertext is appended with the sha256 result of the ciphertext
+
+The real world problem is 
+
+Active MITM don't work if you have a tag. Flipping a single bit will be detected.
+
+Passive MITM
+
+To even have ciphertext, you need to do all the PKE thing and get a shared secret. The PKE thing starts with the server sending its public key to the client IN PLAIN TEXT. A man in the middle can intercept that and replace it with its own public key.
+
+
+TODO: does self-signed cert protect against MITM attack?
+https://security.stackexchange.com/questions/184969/how-mitm-attack-got-performed-on-self-signed-certificate-while-private-keys-is-g
+
+
+Digital Signature
+=======================
+People used to say that digital signature is just to use the private key to encrypt the hash of the plaintext.
+
+This could be VERY misleading since it feels like EVERY public key algorithm that has public-private key-pair can be used to do "signature". But actually this mindsetting only works for RSA, and ignorant people just think RSA is the whole public key encryption world.
+
+For example in Diffie-Hellman key exchange, there are public key and private key, but they are NEVER meant to be used to "encrypt" or "decrypt" anything.
+
+https://crypto.stackexchange.com/questions/835/why-cant-diffie-hellman-be-used-for-signing
+
+
+EtM / MtE / E&M
+====
+https://crypto.stackexchange.com/questions/202/should-we-mac-then-encrypt-or-encrypt-then-mac
+https://en.wikipedia.org/wiki/Authenticated_encryption#Approaches_to_authenticated_encryption
+
+
+PRF vs hash function
+===========
+https://crypto.stackexchange.com/questions/15935/is-there-a-difference-between-prf-and-a-hash-function
+
+I think apparently hash function takes arbitrary length input though...
+
+
+Compute the RSA public key from the private key
+==============
+RSA is a asymmetric cryptography system, of course meaning that no one can compute the private key from the public key ( in a reasonable time). But it's trivial to get the public key if you have the private key, because you always know those 2 primes p q and n=pq in the private key, and public key is just the fucking same n with `e=65537 or 3`. is exactly what the `openssl genrsa` and `openssl rsa` do.  See here for usage:
+    https://stackoverflow.com/questions/5244129/use-rsa-private-key-to-generate-public-key
+For ECDH it's also trivial:
+    https://stackoverflow.com/questions/696472/given-a-private-key-is-it-possible-to-derive-its-public-key
+
+
+
+KEM is real
+======
+https://tools.ietf.org/html/rfc5990
+
+
+Play with openssl rsa
+==================
+Everywhere a public key can be used, a private key can be used too (without -pubin), 
+since for RSA build public key from private key is trivial
+
+### private key generation
+```bash
+openssl genrsa -out priv.pem
+```
+
+### extract n and e from that private key and form its public key
+```bash
+openssl rsa -in priv.pem -out pub.pem -pubout
+```
+
+### full asymmetric encryption
+```bash
+echo -n 'fuck' | openssl rsautl -encrypt -inkey pub.pem -pubin -out fuck_encrypted
+```
+
+
+### full asymmetric decryption
+```bash
+# only private key can be used to decrypt
+openssl rsautl -decrypt -inkey priv.pem -in fuck_encrypted
+```
+
+
+### signature
+```bash
+echo -n 'fuck' | openssl rsautl -sign -inkey priv.pem -out fuck_signed
+```
+
+### verify signature
+```
+# use private key works... but lose the meaning of signature
+openssl rsautl -verify -in fuck_signed -inkey pub.pem -pubin
+```
+
+TODO: I guess by `-sign`, the output file store the encrypted content together with the signature, which is not the traditional definition of "digital signature" where you "encrypt" (i.e. not sure this is standard term - can you "encrypt" with private key? - it's just raise the hash value to the power of `d` (mod n)) the hash of the plaintext using the private key and append it to the plaintext.
+
+## openssl genpkey
+
+It seems that `genpkey` command is more recently designed and contains the functionality of `genrsa`
+
+Problem with PLAIN/RAW/TEXTBOOK RSA & Improvements
+=====
+https://crypto.stackexchange.com/questions/1448/definition-of-textbook-rsa
+https://www.csa.iisc.ac.in/~arpita/Cryptography15/CT10.pdf
+
+
+TODOs
+=======
+Non-deterministic crypto system?
+
