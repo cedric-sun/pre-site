@@ -1,0 +1,89 @@
+ODR
+============
+odr-used is a property of a (an)
+- variable
+- structured binding
+- `*this`
+- virtual member function
+- function
+- non-placement allocation or deallocation function for a class
+- an assignment operator function in a class
+- constructor for a class
+- destructor for a class
+- local entity (in a declarative region)
+
+that is used in an expression in such a way that requires it to have exactly 1 definition across the whole program.
+
+VALUE
+====================
+7.1.1   An expression is a sequence of operators and operands that specifies a computation. An expression can result in a value and can cause side effects.
+
+Value is one of the 13 entities.
+
+A value is the result of evaluating an expression.
+
+It doesn't make sense to take the address of 3+5,
+
+// and there is absolute no reason for compiler to arrange storage for such a result. At runtime the wildest thing compiler can write for you is just call the ADD instruction and put the result in the EAX register of x86_64.
+```c++
+int *p = &(3+5) // WTF
+```
+
+
+push_back and emplace_back
+================
+The signature of the only `push_back` in ancient c++98
+```c++
+void push_back (const value_type& val);
+```
+
+The parameter has to be a const reference, cuz that time only const reference can bind to a int literal (formally, the result of a rvalue expression)
+```
+vector<int> x;
+int a = 0;
+x.push_back(a); // #1
+x.push_back(42); // #2 would be weird if we can't do this
+```
+
+This effectively create a 4 byte storage one the calling stack frame storing this 42, and bind a reference on `push_back`'s call stack to that storage.
+
+Now, to officially put this 42 to the end of the storage of the vector, libstdc++ needs to copy that temporary 4 bytes again. libstdc++ developers cannot make assumption about how this reference is obtained, i.e. inside `push_back`, they can't tell #1 from #2.  Now replace int with any type this argument is still true.
+
+With the introduction of rvalue reference in C++11, things changed. We now have a way in language level to tell such differences. Rvalue reference (even without const) can bind to literal (formally ... ).  It's an error to bind a rvalue reference to the result of a lvalue expression. The libstdc++ developers now have a way to distinguish ...
+
+The newly created temporary 42 is directly moved into the vector storage. No redundant copy.
+
+What does it mean for a function to return a rvalue reference;
+
+
+const member function
+============
+```
+#include <cstdio>
+
+struct X{
+    void foo() const {
+        puts("foo const");
+    }
+
+    void foo() {
+
+        puts("foo non-const");
+    }
+};
+
+
+int main() {
+    X x;
+    const X cx;
+    x.foo();
+    cx.foo();
+}
+```
+
+`void foo() const` can only be called on a const qualified `foo` instance. `const` effectively take part in the overload resolution.
+
+Inside the `const` qualified member function, `*this` is const qualified, which means among other member functions, only `const` qualified member functions can be called;
+
+Really, "const member function promised not to change its object", is a consequence, not its motivation.
+
