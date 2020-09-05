@@ -29,6 +29,28 @@ It doesn't make sense to take the address of 3+5,
 int *p = &(3+5) // WTF
 ```
 
+l/rvalue ref
+======
+non-const lvalue ref can only bind to lvalue expression
+const lvalue ref can bind to prvalue ref
+rvalue ref can only bind to rvalue expression
+
+Interchangability of Reference and Object
+=======================
+7.2.2.1
+If an expression initially has the type “reference to T” (9.3.3.2, 9.4.3), the type is adjusted to T prior to any further analysis.
+
+That's why when you request an object but get a reference, everything works fine.
+TODO:----
+```
+void foo(int c){}
+
+int main() {
+    int a = 42;
+    int &b = a; // variable b has type "reference to int"
+    foo(b); // expression `b` has type `int`
+}
+```
 
 push_back and emplace_back
 ================
@@ -49,9 +71,45 @@ This effectively create a 4 byte storage one the calling stack frame storing thi
 
 Now, to officially put this 42 to the end of the storage of the vector, libstdc++ needs to copy that temporary 4 bytes again. libstdc++ developers cannot make assumption about how this reference is obtained, i.e. inside `push_back`, they can't tell #1 from #2.  Now replace int with any type this argument is still true.
 
-With the introduction of rvalue reference in C++11, things changed. We now have a way in language level to tell such differences. Rvalue reference (even without const) can bind to literal (formally ... ).  It's an error to bind a rvalue reference to the result of a lvalue expression. The libstdc++ developers now have a way to distinguish ...
+With the introduction of rvalue reference in C++11, things changed. We now have a way in language level to tell such differences. Rvalue reference (even without const) can bind to literal (formally ... ).  It's an error to bind a rvalue reference to the result of a lvalue expression. The value category of the argument expression now join the overload resolution, and only the overload with a rvalue reference parameter will be matched and called. The libstdc++ developers now have a way to tell if the reference get passed in is binding to that temporary 4 byte storage on the calling stack, or is it a formal object living somewhere. This gives us the second signature added in C++11:
+```
+void push_back( T&& value );
+```
+
 
 The newly created temporary 42 is directly moved into the vector storage. No redundant copy.
+
+value category of function call expression 
+===========
+Expression that call to a function that return a lvalue reference is lvalue expression:
+```
+int& foo() {
+    int *c = new int{42};
+    return *c;
+}
+
+int main() {
+    foo() = 77;
+}
+```
+
+Expression that call to a function that return a non-reference is prvalue expression:
+```
+struct X { int a; };
+
+X foo() {
+    return X{42};
+}
+
+int main() {
+    X c = foo();
+}
+```
+
+Expression that call to a function that return a rvalue reference is a xvalue expression:
+```
+TODO
+```
 
 What does it mean for a function to return a rvalue reference;
 
@@ -87,3 +145,87 @@ Inside the `const` qualified member function, `*this` is const qualified, which 
 
 Really, "const member function promised not to change its object", is a consequence, not its motivation.
 
+
+https://en.cppreference.com/w/cpp/language/overload_resolution
+
+> If any candidate function is a member function (static or non-static), but not a constructor, it is treated as if it has an extra parameter (implicit object parameter) which represents the object for which they are called and appears before the first of the actual parameters.
+
+Similarly, the object on which a member function is being called is prepended to the argument list as the implied object argument.
+
+For member functions of class X, the type of the implicit object parameter is affected by cv-qualifications and ref-qualifications of the member function as described in member functions.
+
+
+TODO: see ref-qualified member funciton, and relate to the implied object parameter/argument as well.
+
+
+FUCKING COPY-ELISION AND RVO
+===============
+
+
+
+=========================================================
+
+
+rvalue (prvalue and xvalue) expression as argument of a function call will match function overloads that takes a rvalue reference.
+
+
+`decltype<t> t2 = std::move(t)` return (cast t to?) a rvalue reference so the expression itself is a rvalue expression, so the fucking move assignment operator get fucking fired instead of the plain old copy assignment opeartor.
+
+done.
+
+
+```c++
+#include <cstdio>
+void foo(int &x) {
+    printf("%s\n", "lv ref");
+}
+
+void foo(int &&x) {
+    printf("%s\n", "RVALUE ref");
+}
+
+int &lv() {
+    int *c = new int{42};
+    return *c;
+}
+
+int &&rv() {
+    return 3+2;
+}
+
+int main() {
+    foo(lv()); // lv ref
+    foo(rv()); // RVALUE ref
+    int &&gg = rv();
+    foo(gg); // lv ref
+}
+```
+
+Rule of 3
+=========================================================
+
+Rule of 5 ? 4.5?
+=========================================================
+https://stackoverflow.com/questions/45754226/what-is-the-rule-of-four-and-a-half
+https://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
+
+copy and swap ? pre c++11 ?
+=========================================================
+copy constructor / copy assignment operator pass by value?
+
+
+if xvalue expression fire rv-ref overload, and prvalue expression fire rv-ref overload too, why differentiating these two?
+==============
+
+
+use `make_(unique|shared)` helpers instead of smart pointer constructor
+============
+https://stackoverflow.com/a/22571331/8311608
+
+
+Overload a operator as a non-member function and declare it as friend to grant access to internal data members
+https://stackoverflow.com/questions/2828280/friend-functions-and-operator-overloading-what-is-the-proper-way-to-overlo
+
+The expression after the return keyword is implicit treated as a rvalue
+=====================
+https://stackoverflow.com/questions/4986673/c11-rvalues-and-move-semantics-confusion-return-statement
