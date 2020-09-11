@@ -139,6 +139,9 @@ int main() {
 }
 ```
 
+TODO:: REALLY? A NON CONST object should be able to call a CONST
+member function.
+
 `void foo() const` can only be called on a const qualified `foo` instance. `const` effectively take part in the overload resolution.
 
 Inside the `const` qualified member function, `*this` is const qualified, which means among other member functions, only `const` qualified member functions can be called;
@@ -229,3 +232,124 @@ https://stackoverflow.com/questions/2828280/friend-functions-and-operator-overlo
 The expression after the return keyword is implicit treated as a rvalue
 =====================
 https://stackoverflow.com/questions/4986673/c11-rvalues-and-move-semantics-confusion-return-statement
+"Please do not return local variables by reference, ever. An rvalue reference is still a reference."
+
+
+Rare case when return a rvalue ref is useful
+========
+https://stackoverflow.com/questions/5770253/is-there-any-case-where-a-return-of-a-rvalue-reference-is-useful
+
+
+Member initialization list - initialization order
+==============
+The order of member initializers in the list is irrelevant.
+
+non-static data member are initialized in order of declaration in the class definition.
+```
+struct A {
+    int a;
+    int b;
+
+    A(int x): b(x), a(b){} // warning: a(b) but b is not initializerd
+}
+
+struct B {
+    int b;
+    int a;
+
+    B(int x): a(b), b(x){} // Okay
+}
+```
+
+Avoid instantiating class in loop
+============
+```
+#include <utility>
+#include <vector>
+
+using std::vector;
+
+#include <cstdio>
+#include <stdio_ext.h>
+
+struct GG {
+    GG() { puts("constructed!"); }
+    ~GG() { puts("DE-structed!"); }
+};
+
+int main() {
+    __fsetlocking(stdout,FSETLOCKING_BYCALLER);
+    printf("sizeof(vector<int>)=%lu\n",sizeof(vector<int>));
+    vector<vector<int>> x;
+    for (int i=0;i<10;i++) {
+        vector<int> y;
+        GG _gg;
+        for (int j=0;j<10;j++) {
+            y.push_back((i<<8) + j);
+        }
+        printf("i=%d:",i);
+        for (int z:y) {
+            printf("%d\t",z);
+        }
+        putchar('\n');
+        x.push_back(y);
+    }
+}
+```
+
+It run `GG`'s ctor and dtor, and `vector<int>`'s ctor and dtor every single loop.
+
+reuse a moved container & the moved-from vector
+============
+https://stackoverflow.com/questions/9168823/reusing-a-moved-container
+
+Technically when the moving `x.push_back()` is called (thus work on y destructively), the lifetime of `y` is far from ending; but's it's still okay to do the following. It avoid creating a vector<int> inside the loop every round. Also mind the moved-from vector problem.
+
+```
+#include <utility>
+#include <vector>
+
+using std::vector;
+
+#include <cstdio>
+#include <stdio_ext.h>
+
+
+void print_vec(const vector<int> &vec) {
+    for (const int x: vec) {
+        printf("%d\t",x);
+    }
+    putchar('\n');
+}
+
+int main() {
+    __fsetlocking(stdout,FSETLOCKING_BYCALLER);
+    vector<vector<int>> x;
+    vector<int> y;
+    for (int i=0;i<10;i++) {
+        y.clear(); // so call clear manually
+        for (int j=0;j<10;j++) {
+            y.push_back((i<<8) + j);
+        }
+        x.push_back(std::move(y));
+        // the moved-from vector is not always empty:
+        // https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
+    }
+    for (const auto &vec:x) {
+        print_vec(vec);
+    }
+}
+```
+
+TODO: is reference in a "for-each for" always faster than (even) int?
+
+
+
+
+c++ shift
+==========
+https://en.cppreference.com/w/cpp/language/operator_arithmetic#Bitwise_shift_operators
+
+unlike java which has the unsigned right shift `>>>` operator...
+
+TODO: show mapping between shift operators and x86_64 instructions
