@@ -353,3 +353,9 @@ https://en.cppreference.com/w/cpp/language/operator_arithmetic#Bitwise_shift_ope
 unlike java which has the unsigned right shift `>>>` operator...
 
 TODO: show mapping between shift operators and x86_64 instructions
+
+vector over list
+==========
+https://stackoverflow.com/questions/2209224/vector-vs-list-in-stl#comment20988862_2209233
+https://www.stroustrup.com/bs_faq.html#list
+Bjarne Strostrup actually made a test where he generated random numbers and then added them to a list and a vector respectively. The insertions were made so that the list/vector was ordered at all times. Even though this is typically "list domain" the vector outperformed the list by a LARGE margin. Reason being that memory acces is slow and caching works better for sequential data. It's all available in his keynote from "GoingNative 2012"

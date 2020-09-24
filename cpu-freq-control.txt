@@ -1,0 +1,42 @@
+Display static linked (bulit-in) kernel modules
+====================
+```
+cat /lib/modules/$(uname -r)/modules.builtin
+```
+https://superuser.com/questions/577307/how-to-get-a-list-of-active-drivers-that-are-statically-built-into-the-linux-ker
+
+
+Cpu Frequency Control
+https://www.kernel.org/doc/html/v5.8/admin-guide/pm/cpufreq.html
+========================
+The subsystem (collection of kernel modules?) that manages the cpu frequency scaling is known as "cpufreq".
+
+It consists of three layers of code:
+    1. the core - a general framework for governors and drivers to be implemented
+    2. scaling governors - algorithms that estimate required CPU capacity and send request to driver to adjust p-state
+        "As a rule, each governor implements one, possibly parametrized, scaling algorithm"
+    3. scaling drivers - talk to hardware; provide a unified API to governor algorithm
+IMPORTANT: only one driver can registered at a time, and it's expected to handle all CPUs available.
+
+The most important data type in cpufreq: `struct cpufreq_policy`
+A `struct cpufreq_policy` instance describe:
+1. A set of CPUs (potentially only 1) that share the same p-state (i.e. limited by the hardware design and can't use different p-state)
+2. Scaling parameter that are supported by the hardware, like min and max cpu frequency, and available p-states
+3. The scaling governor used for CPUs managed by this policy.
+
+The cpufreq core keeps, FOR EACH CPU, a pointer to a `struct cpufreq_policy` instance.
+
+A new instance of `struct cpufreq_policy` is created every time cpufreq core is informed to handle a new CPU.
+After created, the pointer to this instance is passed to cpufreq's driver's `init()` to get the fields in the instance filled ()
+
+
+
+For Intel Core Sandy Bridge (core i2) and newer cpu, the scaling driver named `intel_pstate` is always used by the kernel.
+
+On my arch linux the following builtin and external kernel module is found for `cpufreq`
+```bash
+[ced@ARCH3 ~]$ grep -i cpufreq /usr/lib/modules/5.8.10-arch1-1/modules.builtin
+kernel/drivers/cpufreq/freq_table.ko
+kernel/drivers/cpufreq/cpufreq_performance.ko
+kernel/drivers/cpufreq/intel_pstate.ko
+```

@@ -1,0 +1,154 @@
+Always inter-process communication: cannot be fast;
+---------- TOP LEVEL ------------
+GET key
+
+SET key value [EX sec | PX millisec | NX | XX KEEPTTL]
+    NX - set iff key NOT EXIST
+    XX - set iff key EXIST
+
+GETSET key new_value
+    set key to new_value and return the original value
+
+MSET k0 v0 k1 v1 k2 v2 ...
+MGET k0 k1 k2 ...
+    multiple get and set
+
+DEL key...
+    VARIADIC | delete keys
+
+INCR key
+DECR key
+INCRBY key delta
+DECRBY key delta
+
+EXPIRE key sec
+    Prescribe that `key` gets deleted in `sec` second. This computes and persists on the disk the timestamp of the instant of expiration, thus even redis server is down, the behavior is always correct.
+    The resolution is always millisecond.
+    Can be used to re-set a new expire time if previously has one.
+
+    
+PEXPIRE key millisec
+    
+TTL key
+    query living time in seconds
+    return value -1 for LIVE FOREVER
+                 -2 if key DOES NOT EXIST (may be already expired or never ever existsed)
+
+PTTL key
+    TTL but millisecond
+
+PERSIST key
+    cancel the expiration schedule of key
+
+KEYS pattern
+    list all keys that match the UNIX wildcard `pattern`
+
+EXISTS key
+    membership query of key in the top level space
+
+TYPE key
+    inspect the data type of `value` that is associated with `key`
+
+---------- linked list ------------
+LPUSH key values...
+RPUSH key valeus...
+    VARIADIC | left push / right push
+
+LPOP key
+RPOP key
+    left pop / right pop
+
+BLPOP keys... timeout
+BRPOP keys... timeout
+    variadic on `keys` but at least 1. If any keys (all of which are lists) is non-empty, these commands return.
+    return value are (key, value) pair indicating that among those `keys`, which one offer the value.
+    If multiple client waiting on the same list, first come first serve.
+
+RPOPLPUSH src_list dest_list
+BRPOPLPUSH src_list dest_list timeout
+
+LRANGE key l r
+    l r is 0-indexed and is BOTH INCLUSIVE
+
+LLEN
+
+LTRIM key l r
+    crop list to [l,r]
+    l r is 0-indexed and is BOTH INCLUSIVE
+
+---------- HASH SET ------------  key is a hash set 
+SADD hash_set values...
+    VARIADIC
+
+SREM key value
+    remove vlaue from key
+
+SCARD key
+    get cardinality.
+
+SMEMBERS key
+    dump all members of key
+
+SISMEMBER key value
+    test membership of value
+
+Set Algebra (does NOT modify each)
+    SUNION x y z ...
+    SUNIONSTORE dest x y z ...
+        set union
+    SINTER x y z ...
+    SINTERSTORE dest x y z ...
+        set intersection
+    SDIFF x a b c ...
+    SDIFFSTORE dest x a b c ...
+        set difference ((x \ a) \ b) \ c ...
+
+SPOP key count
+    randomly pop count element(s) from key
+
+SRANDMEMBER key count
+    randomly get count element(s) from key, WITHOUT modifying key
+
+--------- sorted set -------------
+ZADD sset score value
+ZREM sset score 
+
+by rank
+    ZRANK sset value
+        determine rank (index) of value
+    ZRANGE sset start end [WITHSCORES]
+    ZREVRANGE sset start end [WITHSCORES]
+    ZREMRANGEBYRANK sset start end
+
+by score
+    ZRANGEBYSCORE sset min max
+    ZREVRANGEBYSCORE sset min max
+    ZREMRANGEBYSCORE sset min max
+
+ZCARD sset
+    cardinality.
+
+---------- hash map -----------
+HSET my_hash_map_name k v
+
+HGET hash_name k
+
+HMSET my_hash_map_name k0 v0 k1 v1 k2 v2 ...
+    variadic hset
+
+HMGET hash_name k0 k1 k2
+    variadic hget
+
+HGET my_hash_map_name k
+
+HGETALL my_hash_map_name
+    dump all kv pairs
+
+HDEL my_hash_map_name k
+
+HINCR my_hash_map_name k
+HINCRBY my_hash_map_name k delta
+    there is no HDECR or HDECRBY, but delta can be negative
+
+---------- bitmap -----------
+
