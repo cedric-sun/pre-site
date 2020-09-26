@@ -27,11 +27,26 @@ A `struct cpufreq_policy` instance describe:
 The cpufreq core keeps, FOR EACH CPU, a pointer to a `struct cpufreq_policy` instance.
 
 A new instance of `struct cpufreq_policy` is created every time cpufreq core is informed to handle a new CPU.
-After created, the pointer to this instance is passed to cpufreq's driver's `init()` to get the fields in the instance filled ()
+After created, the pointer to this instance is passed to cpufreq's driver's `init()` to get the fields in the instance filled
+Then, if the governor layer is respected, i.e. the scaling algorithm bulitin in the scaling driver is not used:
+    `init()` of the default governor, determined by kernel configuration, will be invoked.
+    `start()` of the governor will register CPU utilization update callbacks with the majestic CPU scheduler 
+Otherwise, we are using the scaling algorithm directly provided by the driver.
+    `setpolicy()` of the driver will be invoked, for each policy instance, to register those CPU utilization update callbacks to CPU scheduler.
 
 
+In `/sys/devices/system/cpu/cpufreq/policyX/`, entries prefixed by `cpuinfo_` describe hardware attribute or ability, e.g.
+- cpuinfo_cur_freq      Current actual cpu speed acquired from the hardware
+- cpuinfo_max_freq      The maximum frequency supported by the CPU; read only
+- cpuinfo_min_freq      The minimum frequency supported by the CPU; read only
 
-For Intel Core Sandy Bridge (core i2) and newer cpu, the scaling driver named `intel_pstate` is always used by the kernel.
+while entries prefixed by `scaling_` describe policy configuration, e.g.
+- scaling_cur_freq      Kernel estimated current cpu frequency; Might be inaccurate.
+- scaling_max_freq      The maximum frequency allowed by the policy; read-write
+- scaling_min_freq      The minimum frequency allowed by the policy; read-write
+
+
+For Intel Core Sandy Bridge (2nd gen core) and newer cpu, the scaling driver named `intel_pstate` is always used by the kernel.
 
 On my arch linux the following builtin and external kernel module is found for `cpufreq`
 ```bash
@@ -40,3 +55,21 @@ kernel/drivers/cpufreq/freq_table.ko
 kernel/drivers/cpufreq/cpufreq_performance.ko
 kernel/drivers/cpufreq/intel_pstate.ko
 ```
+
+https://www.kernel.org/doc/html/v5.8/admin-guide/pm/intel_pstate.html
+=====================================
+
+Since Skylake (6-th gen), a hardware implemented frequency scaling controller is builtin in the CPU, meaning that the kernel can now delegate the frequency scaling decision to the CPU itself. Intel's commercial name for this technology is "Speed Shift". Technically it's also known in the kernel community as HWP (Hardware Managed P-state).
+
+For `intel_pstate` driver,
+    Active mode mean the driver is bypassing the gorvernor layer, and directly talk to the scaling core & CPU scheduler.
+        HWP means 
+        without HWP means
+    Passive mean the gorvernor layer is there.
+
+TODO: x86 HLT instruction
+===========================================================================================
+Does high CPU frequency necessarily incur large heat thus high fan speed?
+    I assume not for now... since just because the clock source is generating high clock frequency
+    does not necessarily CPU is doing anything... If HLT let CPU do nothing until next interrupt,
+    A cpu can work in a state of high clocking frequency but no actual job.

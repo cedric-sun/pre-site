@@ -124,6 +124,8 @@ CLI args
 
 The missing section of go doc text/template
 ========
+Each Template instance can only be executed once.
+
 mental picture:
     Each instance of `type Template` is a COLLECTION of `(name, content)` pairs.
     `name` is plain string, for now consider `content` as some internal representation.
