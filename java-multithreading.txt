@@ -1,0 +1,1 @@
+"Safe publication" is to guarantee that other threads see non-null reference only after the constructor returns (a.k.a object is "completely initialized"). An equivalent way to put this is "do not let `this` escape from constructor".

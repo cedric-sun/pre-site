@@ -359,3 +359,68 @@ vector over list
 https://stackoverflow.com/questions/2209224/vector-vs-list-in-stl#comment20988862_2209233
 https://www.stroustrup.com/bs_faq.html#list
 Bjarne Strostrup actually made a test where he generated random numbers and then added them to a list and a vector respectively. The insertions were made so that the list/vector was ordered at all times. Even though this is typically "list domain" the vector outperformed the list by a LARGE margin. Reason being that memory acces is slow and caching works better for sequential data. It's all available in his keynote from "GoingNative 2012"
+
+Same class template specialization shares the same static member
+=================
+And different specializations don't share.
+
+```c++
+#include <random>
+#include <algorithm>
+#include <benchmark/benchmark.h>
+
+// Singleton random int array across the whole benchmark program.
+// Each benchmark function will see the same random array `data[]`
+template<int MAXN>
+struct SingletonRandomIntArrayFixture : benchmark::Fixture {
+    static int data[MAXN];
+    static bool isInited;
+
+    void SetUp(const benchmark::State& state) {
+        if (!isInited) {
+            for(int i=0;i<MAXN;++i) {
+                data[i]=i;
+            }
+            auto rng= std::default_random_engine{};
+            std::shuffle(data,data+MAXN,rng);
+            isInited=true;
+        }
+    }
+
+    void TearDown(const benchmark::State& state) {
+    }
+};
+
+template<int MAXN> int SingletonRandomIntArrayFixture<MAXN>::data[MAXN];
+template<int MAXN> bool SingletonRandomIntArrayFixture<MAXN>::isInited = false;
+
+#include <cstdio>
+int main() {
+    printf("%lu\n",sizeof(SingletonRandomIntArrayFixture<120>::data));
+    printf("%lu\n",sizeof(SingletonRandomIntArrayFixture<240>::data));
+    printf("%p\n",SingletonRandomIntArrayFixture<120>::data); //           0x55df3d3db060
+    printf("%p\n",SingletonRandomIntArrayFixture<120>::data); // the same: 0x55df3d3db060
+    printf("%p\n",SingletonRandomIntArrayFixture<240>::data); //           0x55df3d3db240
+    printf("%p\n",SingletonRandomIntArrayFixture<240>::data); // the same: 0x55df3d3db240
+}
+```
+
+
+Execution Order Control
+=======================
+It's common in practise that you may want one global (namespace-level) variable get set before 
+
+
+Non-usefulness of volatile in C++
+==============
+https://stackoverflow.com/questions/2484980/why-is-volatile-not-considered-useful-in-multithreaded-c-or-c-programming
+
+TLDR: `volatile` variable only guarantees
+1. read/write of that variable is actually from/to main memory (i.e. they penetrate the cache)
+2. read/write of that variable happens in the source text order
+
+ABSOLUTELY NO GUARANTEE ABOUT:
+1. atomicity of read/write
+2. forbidding instruction reordering. i.e. compiler still reorders instructions.
+    "Assume that we use a volatile variable as a flag to indicate whether or not some data is ready to be read. In our code, we simply set the flag after preparing the data, so all looks fine. But what if the instructions are reordered so the flag is set first?"
+3. cache flush or jvm piggyback whatever

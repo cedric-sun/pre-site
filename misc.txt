@@ -106,3 +106,58 @@ SQL display large number of fields in terminal
 select * from user\G
 ```
 https://stackoverflow.com/questions/924729/how-to-best-display-in-terminal-a-mysql-select-returning-too-many-fields
+
+
+bash logical line and line break
+=================
+Make sure necessary space or semicolon is still there.
+Line break works by treating '\' and the immediately followed '\n' as non-existent, thus bring in the first characters of the next physical line. It will not add a space or anything for you. Thus
+
+```bash
+ls "xxx"\
+"yyy"
+```
+
+is treated as
+```bash
+ls "xxxyyy"
+```
+
+
+Binary `gcc` vs `g++`
+=================
+They are different inode.
+They have exactly the same size.
+Their bits differ.
+
+Now this is mysterious.
+
+```bash
+[ced@ARCH3 ~]$ which gcc g++
+/usr/bin/gcc
+/usr/bin/g++
+[ced@ARCH3 ~]$ ls -li `which gcc g++`
+570923 -rwxr-xr-x 4 root root 1215280 Sep  1 12:08 /usr/bin/g++
+570928 -rwxr-xr-x 3 root root 1215280 Sep  1 12:08 /usr/bin/gcc
+[ced@ARCH3 ~]$ diff `which gcc g++`
+Binary files /usr/bin/gcc and /usr/bin/g++ differ
+```
+
+regex-off search in less
+================
+`/^R`
+
+regex-off in vim
+===========
+https://stackoverflow.com/a/1550774/8311608
+
+
+bash (sh) variable expansion magic
+================
+Search for "Parameter Expansion" in `man bash`
+```
+${var#pattern}      non-greedy prefix removal
+${var##pattern}     greedy prefix removal
+${var%pattern}      non-greedy suffix removal
+${var%%pattern}     greedy suffix removal
+```
