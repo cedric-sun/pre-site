@@ -1,9 +1,30 @@
-user create / delete
+create user
 ===============
+e.g. create a user with no privilege
+    CREATE USER IF NOT EXISTS
+        cedjjj
 
-grant permission
-=================
+Privileges & Grant
+==============
+https://mariadb.com/kb/en/grant
 
+Determine what privileges an user has:
+    `SHOW GRANTS [FOR user]`
+
+implicit user creation
+------------
+https://mariadb.com/kb/en/grant/#implicit-account-creation
+
+`GRANT` can be used to implicitly create user at the same time you grant some privileges to that (future) user.
+
+```plain
+GRANT USAGE ON *.* TO 'user123'@'%' IDENTIFIED VIA PAM using 'mariadb' require ssl ;
+Query OK, 0 rows affected (0.00 sec)
+```
+
+Role
+==============
+A role is a bundle of privileges. By assigning an user a role, that user gets all the privileges in the role bundle. Here goes the thought of (multiple) inheritance.
 
 create database
 ================
@@ -11,6 +32,9 @@ create database
 - `CREATE OR REPLACE` supported
 - database-level default charset and collation can be set.
 - can have a comment for the new db
+
+create table
+=============
 
 
 Character Set (charset)and Collations
@@ -131,3 +155,42 @@ To Set a variable:
 To Get a variable:
     SHOW VARIABLES LIKE 'character_set_server'
 
+
+MariaDB data_type
+=================
+Most numeric type (except ...TODO) can be SIGNED, UNSIGNED, or ZEROFILL.
+    e.g. CREATE TABLE t0 (c0 INT(4) UNSIGNED NOT NULL);
+
+The number in the parentheses after type name (e.g. (4) above) is called the `display width` of this field. Application can retrieve this value in the column description, thus decide how to display the number. Whether use it is application's choice. It does not constrain the storage range in any sense.
+
+
+Numberic Type
+    Physical Type: total 9
+        name        #bytes          range                                      (M) meaning             (D) meaning
+        TINYINT     1 byte.     -128        to  127                            display width               /
+        SMALLINT    2 byte.     -32768      to  32767                          display width               /
+        MEDIUMINT   3 byte.     -8388608    to  8388607                        display width               /
+        INT         4 byte.     -2147483648 to  2147483647                     display width               /
+        BITINT      8 byte      -9223372036854775808 to 9223372036854775807    display width               /
+        DECIMAL     TODO                                                       total # of digits      # of digits after the decimal point
+                                                                               (the precision)         (the scale)
+        FLOAT       32 bit float                                               (M,D): ditto; DEPRECATED: this mean sql engine will use non-ieee754 float; WILL BE REMOVED IN FUTURE;
+        DOUBLE      64 bit double                                               (M,D): ditto; DEPRECATED: this mean sql engine will use non-ieee754 double; WILL BE REMOVED IN FUTURE;
+        BIT                                                                    # of bits (1 to 64)         /
+    Synonyms
+        Boolean     TINYINT(1)
+        Integer     INT
+        DEC         DECIMAL
+        NUMBER      DECIMAL (do not use; exist for Oracle compatibility)
+        DOUBLE PRECISION        DOUBLE
+        REAL        DOUBLE
+
+(byte/text)String Type. (M) is in byte, meaning that one chinese character in utf8mb4 requires at least CHAR(3), i.e. charset sensitive.
+Byte string differs from text string in that byte string has no concept of charset and collation thus can't be compared; padding is also different.
+    name                                                    (M) meaning                                             if content < capacity
+    CHAR(M)             fixed-length string                 fixed # of BYTE (0 to 255)                              right padded with SP (but trimed when retrieved)
+    VARCHAR(M)          variable-length string              the maximum column length in characters (0 to 65535)    won't charge unused storage.
+    BINARY(M)           fixed-length byte string            same as CHAR(M) (0 to 255)                              right padded with 0x00 (NOT removed when retrieved)
+    VARBINARY(M)        variable-length byte string         same as VARCHAR(M)                                      won't charge unused storage.
+
+* for limits of VARCHAR and VARBINARY mariadb doc say 65532 but mysql doc says 65535
