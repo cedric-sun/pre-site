@@ -211,7 +211,7 @@ Most numeric type (except ...TODO) can be SIGNED, UNSIGNED, or ZEROFILL.
 
 The number in the parentheses after type name (e.g. (4) above) is called the `display width` of this field. Application can retrieve this value in the column description, thus decide how to display the number. Whether use it is application's choice. It does not constrain the storage range in any sense.
 
-
+```plain
 Numberic Type
     Physical Type: total 9
         name        #bytes          range                                      (M) meaning             (D) meaning
@@ -249,6 +249,7 @@ total 5
     DATETIME
     TIMESTAMP
     YEAR
+```
 
 
 * for limits of VARCHAR and VARBINARY mariadb doc say 65532 but mysql doc says 65535
@@ -274,17 +275,15 @@ SELECT CURDATE() as today;
 ````
 
 This alias CAN ONLY be used in `GROUP BY`, `ORDER BY` and `HAVING` clause;
-Specifically, This alias CANNOT be used in `WHERE` clause and other `select_expr`s.
+
+Specifically, this alias CANNOT be used in `WHERE` clause and other `select_expr`s.
+
 https://dev.mysql.com/doc/refman/8.0/en/problems-with-alias.html
 
 #### Select distinct
+
 ```sql
 SELECT DISTINCT ... FROM ... [WHERE ...]
-```
-
-#### Select distinct count
-```sql
-SELECT COUNT(DISTINCT ...) FROM  ... [WHERE ...]
 ```
 
 #### Sorted select
@@ -412,6 +411,14 @@ MariaDB [menagerie]> SELECT name, sex, COUNT(*) FROM pet GROUP BY sex; /* Makes 
 3 rows in set (0.001 sec)
 
 ```
+
+### COUNT
+#### distinct count
+```sql
+SELECT COUNT(DISTINCT ...) FROM  ... [WHERE ...]
+```
+
+
 
 Quoting
 =====================
