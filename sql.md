@@ -8,7 +8,6 @@ create user
 ===============
 e.g. create a user with no privilege
     CREATE USER IF NOT EXISTS
-        cedjjj
 
 Privileges & Grant
 ==============
@@ -140,15 +139,58 @@ https://mariadb.com/kb/en/extended-show/
 
 
 
-`LIKE` / `NOT LIKE`
-=============
+Pattern matching
+==================
+### basic `LIKE` / `NOT LIKE`
 https://mariadb.com/kb/en/like/
+
+case-insensitive by default;
 
 Only 2 meta char allowed:
     % matches any number of characters, including zero.
     _ matches any single character.
 
-If not being used in a `WHERE` clause, `LIKE` works on the first column for a multicolumn-result query.
+### more powerful regular expression LIKE
+
+- `REGEXP_LIKE()` function (not in MariaDB, use RLIKE instead there)
+- `REGEXP` or `RLIKE` operators
+
+case-insensitive by default;
+
+```sql
+MariaDB [menagerie]> select * from pet where owner REGEXP '^b';
++------+-------+---------+------+------------+-------+
+| name | owner | species | sex  | birth      | death |
++------+-------+---------+------+------------+-------+
+| Fang | Benny | dog     | m    | 1990-08-27 | NULL  |
+| Slim | Benny | snake   | m    | 1996-04-29 | NULL  |
++------+-------+---------+------+------------+-------+
+2 rows in set (0.000 sec)
+
+```
+
+3 ways to make regex pattern matching case-sensitive (mysql specific, since MariaDB doesn't have `REGEXP_LIKE`):
+```sql
+SELECT * FROM pet WHERE REGEXP_LIKE(name, '^b' COLLATE utf8mb4_0900_as_cs);
+SELECT * FROM pet WHERE REGEXP_LIKE(name, BINARY '^b');
+SELECT * FROM pet WHERE REGEXP_LIKE(name, '^b', 'c'); 
+```
+
+For MariaDB:
+```sql
+MariaDB [menagerie]> select * from pet where owner REGEXP BINARY '^b';
+Empty set (0.000 sec)
+
+MariaDB [menagerie]> select * from pet where owner REGEXP BINARY '^B';
++------+-------+---------+------+------------+-------+
+| name | owner | species | sex  | birth      | death |
++------+-------+---------+------+------------+-------+
+| Fang | Benny | dog     | m    | 1990-08-27 | NULL  |
+| Slim | Benny | snake   | m    | 1996-04-29 | NULL  |
++------+-------+---------+------+------------+-------+
+2 rows in set (0.001 sec)
+
+```
 
 
 Variables
@@ -213,6 +255,28 @@ total 5
 
 SELECT
 ============================================
+#### Clause Order
+```
+SELECT ...
+FROM ... PARTITION ...
+WHERE ...
+GROUP BY ...
+HAVING ...
+WINDOW ...
+ORDER BY ...
+LIMIT ...
+```
+
+#### Column alias
+`select_expr` can contain an alias:
+```
+SELECT CURDATE() as today;
+````
+
+This alias CAN ONLY be used in `GROUP BY`, `ORDER BY` and `HAVING` clause;
+Specifically, This alias CANNOT be used in `WHERE` clause and other `select_expr`s.
+https://dev.mysql.com/doc/refman/8.0/en/problems-with-alias.html
+
 #### Select distinct
 ```sql
 SELECT DISTINCT ... FROM ... [WHERE ...]
@@ -286,4 +350,89 @@ Happens when you write comma separated table names
 INNER JOIN
 ---------------
 If table A is to INNER JOIN with table B,
+
+`HAVING` vs `WHERE`
+=====================
+Condition specified in `WHERE` clause is evaluated on-the-fly for each row during the scanning of all row.
+Condition specified in `HAVING` clause is evaluated on the result row set produced after `WHERE` condition is filetered.
+
+They have very similar sematics. It's just the timing of perform filtering is different.
+If all query condition can be tested on the fly, using `WHERE` to perform a one-pass check is enough.
+For aggregate functions, it's usually a MUST to look at the result after `WHERE` have done its job, which must be done by `HAVING`.
+
+Aggregate Functions
+=================
+List of all aggregate functions:
+https://dev.mysql.com/doc/refman/8.0/en/aggregate-functions.html
+
+`GROUP BY` is the special clause that interacts with aggregate functions.
+
+(from the link above)
+> If you use an aggregate function in a statement containing no GROUP BY clause, it is equivalent to grouping on all rows.
+
+You can `GROUP BY` multiple column (i.e. group by per combination of):
+```sql
+MariaDB [menagerie]> SELECT species,sex, COUNT(*) FROM pet GROUP BY species, sex;
++---------+------+----------+
+| species | sex  | COUNT(*) |
++---------+------+----------+
+| bird    | NULL |        1 |
+| bird    | f    |        1 |
+| cat     | f    |        1 |
+| cat     | m    |        1 |
+| dog     | f    |        1 |
+| dog     | m    |        2 |
+| hamster | f    |        1 |
+| snake   | m    |        1 |
++---------+------+----------+
+8 rows in set (0.000 sec)
+
+```
+
+When selecting column(s) together with aggregate functions, all those column name SHOULD appear in the `GROUP BY` clause. e.g.
+```sql
+MariaDB [menagerie]> SELECT sex, COUNT(*) FROM pet GROUP BY sex; /* Perfectly reasonable. */
++------+----------+
+| sex  | COUNT(*) |
++------+----------+
+| NULL |        1 |
+| f    |        4 |
+| m    |        4 |
++------+----------+
+3 rows in set (0.001 sec)
+
+MariaDB [menagerie]> SELECT name, sex, COUNT(*) FROM pet GROUP BY sex; /* Makes no sense. */
++----------+------+----------+
+| name     | sex  | COUNT(*) |
++----------+------+----------+
+| Whistler | NULL |        1 |
+| Buffy    | f    |        4 |
+| Bowser   | m    |        4 |
++----------+------+----------+
+3 rows in set (0.001 sec)
+
+```
+
+Quoting
+=====================
+3 quote symbol exists in SQL:
+#### Single quote
+
+'string'        
+
+#### Backtick Quote
+
+`identifier`: Refer to a identifier.
+
+```sql
+SELECT id AS 'a', COUNT(*) AS cnt FROM tbl_name GROUP BY `a`; /* `...GROUP BY 'a'` doesn't work */
+```
+
+"???"   TODO
+
+SQL Sharding
+=================
+
+Master Slave Replication
+==================
 
