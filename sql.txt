@@ -1,3 +1,9 @@
+CLI usage
+===========
+-h <host>       specify the host on which the sql server is running
+-p<pswd>        (NO INTERVENING SPACE) specify password in-place on command line; It's a problem to have a space in between: `mysql -u user -p pswd` is connect to the database named `pswd` and input password later in the prompt.
+-u <user>
+
 create user
 ===============
 e.g. create a user with no privilege
@@ -193,4 +199,91 @@ Byte string differs from text string in that byte string has no concept of chars
     BINARY(M)           fixed-length byte string            same as CHAR(M) (0 to 255)                              right padded with 0x00 (NOT removed when retrieved)
     VARBINARY(M)        variable-length byte string         same as VARCHAR(M)                                      won't charge unused storage.
 
+Date & Time data type
+total 5
+    name
+    DATE
+    TIME
+    DATETIME
+    TIMESTAMP
+    YEAR
+
+
 * for limits of VARCHAR and VARBINARY mariadb doc say 65532 but mysql doc says 65535
+
+SELECT
+============================================
+#### Select distinct
+```sql
+SELECT DISTINCT ... FROM ... [WHERE ...]
+```
+
+#### Select distinct count
+```sql
+SELECT COUNT(DISTINCT ...) FROM  ... [WHERE ...]
+```
+
+#### Sorted select
+```sql
+SELECT ... FROM ... ORDER BY ...; /* default: ascending*/
+SELECT ... FROM ... ORDER BY ... DESC; /* descending */
+```
+
+For column of text string type, sort/comparison is case-insensitive by default; use keyword `BINARY` to make them case-sensitive:
+```sql
+SELECT ... FROM ... ORDER BY BINARY ...;
+```
+
+`ORDER BY` multiple columns is possible; Note that `ASC/DESC` is specific to each column:
+```sql
+SELECT ... FROM ... ORDER BY col1, col2 DESC; /* ascending sort on col1; for equal col1, descending sort on col2 */
+```
+
+ALTER
+==============================
+
+#### Sort a table in-place permanently
+https://stackoverflow.com/questions/19824928/how-to-sort-a-mysql-table-in-a-permanent-way
+```
+ALTER TABLE <tbl_name> ORDER BY <col_name> [DESC];
+```
+
+Date Processing
+======================
+#### Addition
+operator+ is overloaded for date arithmetic
+```sql
+SELECT '2018-01-01' + INTERVAL 1 MONTH; /* also notice that sql figured out that the string is a date. */
+SELECT DATE_ADD('2018-01-01', INTERVAL 1 MONTH); /* equivalent */
+```
+
+#### datetime diff
+```sql
+/* TIMESTAMPDIFF(<unit>, <subtrahend_date>, <minuend_date>) */
+SELECT TIMESTAMPDIFF(DAY, CURDATE()+INTERVAL 2 MONTH, CURDATE() + INTERVAL 1 MONTH);
++------------------------------------------------------------------------------+
+| TIMESTAMPDIFF(DAY, CURDATE()+INTERVAL 2 MONTH, CURDATE() + INTERVAL 1 MONTH) |
++------------------------------------------------------------------------------+
+|                                                                          -30 |
++------------------------------------------------------------------------------+
+```
+
+#### Extract component
+
+
+Comparison
+===============
+`NULL` value is tested by `IS NULL` or `IS NOT NULL` rather by the inequality operator `<>`.
+
+The ultimate join guide
+========================
+All "join" happens in the `table_references` non-terminal in `FROM` clause of `SELECT` statement.
+
+CROSS JOIN - cartesian product
+==============
+Happens when you write comma separated table names
+
+INNER JOIN
+---------------
+If table A is to INNER JOIN with table B,
+
