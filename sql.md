@@ -46,9 +46,10 @@ Character Set (charset)and Collations
 ======================
 https://mariadb.com/kb/en/character-sets/
 
-A character set is a set of characters while a collation is the rules for comparing and sorting a particular character set.
-A character set can have many collations associated with it, while each collation is only associated with one character set.
-Charset and collation inherit in a cascading style: table level charset and collation, if not specified, will inherits those from db level,etc.
+- A character set is a set of characters, while a collation is the rules for comparing and sorting a particular character set.
+- A character set can have many collations associated with it, while each collation is only associated with one character set.
+- Charset and collation inherit in a cascading style: table level charset and collation, if not specified, will inherits those from db level,etc.
+- Charset and collation for all binary string is `binary`.
 
 In MariaDB, the character set name is always part of the collation name.
     e.g. charset `big5` has a collation named `big5_chinese_ci`.
@@ -137,7 +138,10 @@ special command `SHOW`
 https://mariadb.com/kb/en/show/
 https://mariadb.com/kb/en/extended-show/
 
-
+#### Show index on a table
+```sql
+SHOW INDEX FROM tbl_name;
+```
 
 Pattern matching
 ==================
@@ -195,7 +199,8 @@ MariaDB [menagerie]> select * from pet where owner REGEXP BINARY '^B';
 
 Variables
 ========
-2 class of variable: global and session
+2 class of variable: global and session [TODO]
+
 
 To Set a variable:
     SET character_set_server = ...
@@ -206,8 +211,10 @@ To Get a variable:
 
 MariaDB data_type
 =================
-Most numeric type (except ...TODO) can be SIGNED, UNSIGNED, or ZEROFILL.
-    e.g. CREATE TABLE t0 (c0 INT(4) UNSIGNED NOT NULL);
+Most numeric type (except ...TODO) can be SIGNED, UNSIGNED, or ZEROFILL.  e.g.
+```sql
+CREATE TABLE t0 (c0 INT(4) UNSIGNED NOT NULL);
+```
 
 The number in the parentheses after type name (e.g. (4) above) is called the `display width` of this field. Application can retrieve this value in the column description, thus decide how to display the number. Whether use it is application's choice. It does not constrain the storage range in any sense.
 
@@ -270,7 +277,7 @@ LIMIT ...
 
 #### Column alias
 `select_expr` can contain an alias:
-```
+```sql
 SELECT CURDATE() as today;
 ````
 
@@ -279,6 +286,21 @@ This alias CAN ONLY be used in `GROUP BY`, `ORDER BY` and `HAVING` clause;
 Specifically, this alias CANNOT be used in `WHERE` clause and other `select_expr`s.
 
 https://dev.mysql.com/doc/refman/8.0/en/problems-with-alias.html
+
+#### Table alias
+```sql
+SELECT p1.name, p1.sex, p2.name, p2.sex, p1.species
+FROM pet AS p1 INNER JOIN pet AS p2
+    ON p1.species = p2.species
+        AND p1.sex = 'f' AND p1.death IS NULL
+        AND p2.sex = 'm' AND p2.death IS NULL;
+```
+
+Table aliases are introduced in the `FROM` clause, but reference to the aliases can appear in the `select_expr`s.
+
+Subquery can refer to an alias introduced in the outer query:
+```sql
+```
 
 #### Select distinct
 
@@ -311,6 +333,13 @@ https://stackoverflow.com/questions/19824928/how-to-sort-a-mysql-table-in-a-perm
 ALTER TABLE <tbl_name> ORDER BY <col_name> [DESC];
 ```
 
+#### Add Index
+
+
+#### Add Primary Key
+
+#### Add Foreign Key
+
 Date Processing
 ======================
 #### Addition
@@ -342,26 +371,49 @@ The ultimate join guide
 ========================
 All "join" happens in the `table_references` non-terminal in `FROM` clause of `SELECT` statement.
 
+"join" generally means to horizontally combine 2 or more tables to form a wider result table;
+
 CROSS JOIN - cartesian product
 ==============
-Happens when you write comma separated table names
+```sql
+SELECT ... FROM tbl_A CROSS JOIN tbl_B;
+SELECT ... FROM tbl_A, tbl_B; /* Not ISO SQL, but supported by most implementations. */
+```
+Happens when you write comma separated table names, or use `CROSS JOIN` explicitly.
+
+I see people claimed that if `CROSS JOIN` is used with `WHERE` clause, then it's not cross join any more, since it's not producing the cartesian product as its final result.
 
 INNER JOIN
 ---------------
-If table A is to INNER JOIN with table B,
+```sql
+SELECT ... FROM tbl_A INNER JOIN tbl_B ON cond [WHERE ...];
+```
+
+If the `ON cond` clause is omitted, `INNER JOIN` is `CROSS JOIN`.
+
+`ON cond` clause is effectively the same as `WHERE cond` clause; Writing filters in `On cond` clause is just more readable.
+
+As per perfornamce, `INNER JOIN` is the same as `CROSS JOIN`; Without index they all requires an O(m * n) scan.
+
+https://stackoverflow.com/questions/670980/performance-of-inner-join-compared-to-cross-join
+
+LEFT JOIN
+-------------------
 
 `HAVING` vs `WHERE`
 =====================
-Condition specified in `WHERE` clause is evaluated on-the-fly for each row during the scanning of all row.
-Condition specified in `HAVING` clause is evaluated on the result row set produced after `WHERE` condition is filetered.
+- Condition specified in `WHERE` clause is evaluated on-the-fly for each row during the scanning of all row.
+- Condition specified in `HAVING` clause is evaluated on the result row set produced after `WHERE` condition is filetered.
 
 They have very similar sematics. It's just the timing of perform filtering is different.
-If all query condition can be tested on the fly, using `WHERE` to perform a one-pass check is enough.
-For aggregate functions, it's usually a MUST to look at the result after `WHERE` have done its job, which must be done by `HAVING`.
+
+- If all query condition can be tested on the fly, using `WHERE` to perform a one-pass check is enough.
+- For aggregate functions, it's usually a MUST to look at the result after `WHERE` have done its job, which must be done by `HAVING`.
 
 Aggregate Functions
 =================
 List of all aggregate functions:
+
 https://dev.mysql.com/doc/refman/8.0/en/aggregate-functions.html
 
 `GROUP BY` is the special clause that interacts with aggregate functions.
@@ -412,6 +464,40 @@ MariaDB [menagerie]> SELECT name, sex, COUNT(*) FROM pet GROUP BY sex; /* Makes 
 
 ```
 
+Whether the second example above is tolerated depends on an option in the globariable `sql_mode`:
+```sql
+MariaDB [menagerie]> SHOW VARIABLES LIKE 'sql_mode'\G
+*************************** 1. row ***************************
+Variable_name: sql_mode
+        Value: STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+1 row in set (0.001 sec)
+
+MariaDB [menagerie]> SELECT name, sex, COUNT(*) FROM pet GROUP BY sex;
++----------+------+----------+
+| name     | sex  | COUNT(*) |
++----------+------+----------+
+| Whistler | NULL |        1 |
+| Buffy    | f    |        4 |
+| Bowser   | m    |        4 |
++----------+------+----------+
+3 rows in set (0.000 sec)
+
+MariaDB [menagerie]> SET sql_mode = 'ONLY_FULL_GROUP_BY';
+Query OK, 0 rows affected (0.000 sec)
+
+MariaDB [menagerie]> SHOW VARIABLES LIKE 'sql_mode'\G
+*************************** 1. row ***************************
+Variable_name: sql_mode
+        Value: ONLY_FULL_GROUP_BY
+1 row in set (0.001 sec)
+
+MariaDB [menagerie]> SELECT name, sex, COUNT(*) FROM pet GROUP BY sex;
+ERROR 1055 (42000): 'menagerie.pet.name' isn't in GROUP BY
+
+```
+
+When it is tolerated, the result in those columns that is not part of `GROUP BY` clause is non-deterministic.
+
 ### COUNT
 #### distinct count
 ```sql
@@ -422,20 +508,20 @@ SELECT COUNT(DISTINCT ...) FROM  ... [WHERE ...]
 
 Quoting
 =====================
+
 3 quote symbol exists in SQL:
-#### Single quote
+#### Single quote `''` for string literal
+https://dev.mysql.com/doc/refman/8.0/en/string-literals.html
 
-'string'        
+If `ANSI_QUOTES` is in `sql_mode`, single quote is the only quote for string literal. Otherwise double quote is acceptable for string literal as well.
 
-#### Backtick Quote
+#### Double quote `""` for identifier
 
-`identifier`: Refer to a identifier.
 
+#### Backtick quote ```` for identifier reference
 ```sql
 SELECT id AS 'a', COUNT(*) AS cnt FROM tbl_name GROUP BY `a`; /* `...GROUP BY 'a'` doesn't work */
 ```
-
-"???"   TODO
 
 SQL Sharding
 =================
