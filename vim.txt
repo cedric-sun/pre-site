@@ -19,3 +19,11 @@ Just left pattern blank
 ```vim
 :%s//foo/g
 ```
+
+literal search 
+==================
+Begin search pattern by `\V` (very nomagic). This disables most meta-character except `/` and `?` (TODO).
+
+```vim
+:h magic
+```
