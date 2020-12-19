@@ -1,0 +1,8 @@
+Semaphore (JDK)
+    An atomic counter; Any thread can increase the count by any integer; Any thread can decrease the count by any integer; If a thread tries to decrease the count below zero, it will block;
+
+Latch (C++20) / WaitGroup (golang) / CountDownLatch (JDK)
+    An atomic counter that can only be decreased. Threads can wait on it to become 0; Threads can decrease it by 1.
+
+Barrier (C++20) / CyclicBarrier (JDK)
+

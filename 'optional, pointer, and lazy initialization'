@@ -1,0 +1,9 @@
+Lazy initialization refer to the fact that:
+
+1. Declare and Define a local scope variable of a) a pointer to, b) an instance of a (usually) user defined type; the idea is that the memory is allocated on the stack first anyway (8 bytes for pointer or sizeof(type) for instance though), but the content of that memory is filled in later.
+
+2. 
+
+If our only intention is to lazy initialize a data member or local variable, since C++ 17 we can use the std::optional. This free us from the usage of heap memory (to be more precise, the usage of a pointer to separate heap memory, since the host class itself might be already in the heap, in which case you can't avoid the heap anyway), and express our intention of lazy init explicitly.
+
+A deeper implication is that, it also enable a variable to escape its scope:

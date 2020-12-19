@@ -1,0 +1,30 @@
+EDIT UPDATE:
+https://stackoverflow.com/questions/17928687/should-i-use-pointers-or-move-semantics-for-passing-big-chunks-of-data
+
+
+============================= old ideas ==============
+ 
+For the current class ("you"):
+    Does the data member need to be polymorphic?
+        e.g. is of an base class type
+        Then pointer or smart pointer is inevitable. In cases when you can absolutely guarantee that 1)the dependency is created before you and 2) the dependency outlives you, a plain old reference can also be used (seated in the ctor). Since you are using base class type to refer to your dependency, you are probabily getting the concrete instance from a factory function or from ctor/setter injection.
+
+    Otherwise, Is the class of data member designed to be used exclusively inside you?
+        e.g. `class File` is only used as the backup storage of `class Cache`, and absolutely no place else in the whole program.
+
+    Is the data member object used exclusively inside you?
+        e.g. a `std::unordered_map<int,std::shared_ptr<Piece>>` instance is used exclusive for cache registry, and will never ever need to be seen by the rest of the program, i.e. never need a getter for it.
+
+    Does it make sense for the data member to be created without you?
+        e.g. 
+
+    Does the data member die with you? (a.k.a Do you own the data member?)
+        e.g. 
+
+    Do you have enough information to construct the data member? (Should you?)
+        e.g. `class Session` use a `class MsgWriter` instance, but MsgWriter takes tons of ctor parameters.
+        If data member is real object (i.e. composition), its ctor must be (explicitly or implicitly) called in the member initialization list of you.
+
+    Do you want to share your data member to others by smart pointer later?
+        If the data member is a real object, you can't return a smart pointer in getter. You can only return a reference or a raw pointer to the data member, and there is no way for the getter client to upgrade that to a smart pointer, since that means they are claiming the ownership of the returned pointer into the smart pointer.
+

@@ -424,3 +424,33 @@ ABSOLUTELY NO GUARANTEE ABOUT:
 2. forbidding instruction reordering. i.e. compiler still reorders instructions.
     "Assume that we use a volatile variable as a flag to indicate whether or not some data is ready to be read. In our code, we simply set the flag after preparing the data, so all looks fine. But what if the instructions are reordered so the flag is set first?"
 3. cache flush or jvm piggyback whatever
+
+Uninherited static data member in base class in the deadly diamond
+```c++
+#include <iostream>
+
+struct A {
+  static int c;
+};
+
+int A::c=42;
+
+struct B : A {};
+struct C : A{};
+struct D : B,C {
+  bool foo() {
+                                     // nothing to do with inheritance here
+    return (&B::A::c) == &(C::A::c); // this is just global namespace resolution...
+  }
+
+  static bool bar() {
+    return (&B::A::c) == &(C::A::c);
+  }
+};
+
+
+int main() {
+  D d;
+  std::cout<<std::boolalpha << D::bar() << d.foo();
+}
+```

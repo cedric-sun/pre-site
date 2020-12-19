@@ -1,0 +1,11 @@
+1. When does the reference become non-null?
+    Foo foo = null;
+    Foo foo = new Foo();
+a) some time during the execution of the ctor
+b) after the ctor return
+
+2. For final field of a class, when other threads see a reference of a safely published
+   object, they are guaranteed to see valid final field of that object; (see final semantics
+   of JLS)
+
+   But what can we say about non-final fields????

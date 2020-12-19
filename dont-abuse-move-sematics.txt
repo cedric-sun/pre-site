@@ -1,0 +1,17 @@
+Know when NOT to use move sematics
+=================
+
+Declare an class instance as a function parameter means that you want a brand new object of such type. Client is free to decide how to supply this "brand new" object to you, they can copy construct one while holding their original one, or they can move their object into yours.
+
+This is simply not true for some case e.g. the Connection. What does it mean that you want a brand new "connection"? Just because the move sematics enables you to move the socket fd around without closing it does not mean you should do. You always want the original "Connection" object to be moved around, not a awkward abuse of move sematics.
+
+
+Ask yourself:
+Is it okay / Does it make sense / Do you want to allow client to still hold its object after calling your function? i.e. Do you allow your parameter to be copy constructed?
+
+If the answer is no, probably use a unique_ptr is more appropriate.
+
+
+Update
+============
+no, you can always force your client to move by taking a rvalue reference
