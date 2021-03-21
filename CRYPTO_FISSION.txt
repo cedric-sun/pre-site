@@ -202,6 +202,21 @@ openssl x509 -in cert.pem -outform DER | sha256sum
 
 https://security.stackexchange.com/questions/14330/what-is-the-actual-value-of-a-certificate-fingerprint
 
+HMAC
+===================
+
+Cryptographic hash function is a one-way function mapping data of arbitrary size to a fixed size bit sequence. CHF never takes a key, and always produce the same output for the same input.
+
+A MAC is a conceptual combination of 3 algorithms:
+
+1. a key generation that sample a key uniformally random from the key space
+2. a signing algorithm that takes a)the key and b)the message, and produce a `tag`
+3. a verifying algorithm that takes the a)`tag`, the key and the message, and produce "accept" if the (message, tag) pair has not been tampered with since being produced, or "reject" otherwise.
+
+MAC is mainly a measure to ensure the integrity of data in transmission, since the key should never been send out or seen by the outside world.
+
+One technique to implement a MAC is to use a CHF, and such technique is called HMAC. CHF is known to produce a small fixed size bit sequence that can be used as a tag. The only problem is that CHF does not takes key. HMAC gives a way to wrap a CHF in its core and takes a key.
+
 TODOs
 =======
 Non-deterministic crypto system?
